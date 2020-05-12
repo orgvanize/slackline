@@ -188,6 +188,15 @@ async function handle_event(event) {
 				ts: copy.ts,
 			}, copy.workspace));
 		return;
+	} else if(event.subtype == 'message_changed') {
+		var copy = cache.message(event.message.ts);
+		if(copy)
+			console.log(await call('chat.update', {
+				channel: copy.channel,
+				ts: copy.ts,
+				text: event.message.text,
+			}, copy.workspace));
+		return;
 	}
 
 	var workspace = await cache.workspace(event.team);
