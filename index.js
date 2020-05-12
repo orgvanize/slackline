@@ -212,8 +212,14 @@ async function handle_event(event) {
 	var user = await cache.user(event.user, workspace);
 	if(user)
 		message.username = user;
+	if(event.thread_ts) {
+		var copy = cache.message(event.thread_ts);
+		if(copy)
+			message.thread_ts = copy.ts;
+	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
 	console.log(ack);
 	cache.message(event.ts, paired.workspace, ack.channel, ack.ts);
+	cache.message(ack.ts, workspace, event.channel, event.ts);
 }
