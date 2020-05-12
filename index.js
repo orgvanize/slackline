@@ -38,6 +38,17 @@ const cache = {
 		return this.tokens[workspace[0]]
 	},
 
+	messages: {},
+	message: function(ts, workspace, channel, echots) {
+		if(!this.messages[ts])
+			this.messages[ts] = {
+				workspace: workspace,
+				channel: channel,
+				ts: echots,
+			};
+		return this.messages[ts];
+	},
+
 	channels: {},
 	users: {},
 	workspaces: {},
@@ -169,6 +180,16 @@ async function handle_event(event) {
 		return;
 	console.log(event);
 
+	if(event.subtype == 'message_deleted') {
+		var copy = cache.message(event.deleted_ts);
+		if(copy)
+			console.log(await call('chat.delete', {
+				channel: copy.channel,
+				ts: copy.ts,
+			}, copy.workspace));
+		return;
+	}
+
 	var workspace = await cache.workspace(event.team);
 	var channel = await cache.channel(event.channel, workspace);
 	var paired = cache.line(workspace, channel);
@@ -182,5 +203,8 @@ async function handle_event(event) {
 	var user = await cache.user(event.user, workspace);
 	if(user)
 		message.username = user;
-	console.log(await call('chat.postMessage', message, paired.workspace));
+
+	var ack = await call('chat.postMessage', message, paired.workspace);
+	console.log(ack);
+	cache.message(event.ts, paired.workspace, ack.channel, ack.ts);
 }
