@@ -1,18 +1,6 @@
 const http = require('http');
 const https = require('https');
 
-const PORT = process.env.PORT;
-if(!PORT) {
-	console.log('Environment is missing $PORT');
-	process.exit(1);
-}
-
-const TOKEN = process.env.TOKEN;
-if(!TOKEN) {
-	console.log('Environment is missing $TOKEN');
-	process.exit(2);
-}
-
 const cache = {
 	lines: {},
 	line: function(workspace, channel) {
@@ -37,26 +25,67 @@ const cache = {
 		}
 		return this.lines[id];
 	},
+	tokens: {},
+	token: function(workspace) {
+		if(!workspace)
+			return null;
+
+		workspace = workspace.split('#');
+		if(workspace.length > 2)
+			return null;
+		else if(workspace.length == 2)
+			this.tokens[workspace[0]] = workspace[1];
+		return this.tokens[workspace[0]]
+	},
 
 	channels: {},
 	users: {},
 	workspaces: {},
-	channel: function(id) {
-		return cached(this.channels, id, 'conversations.info', 'channel', 'name');
+	channel: function(id, workspace) {
+		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
 	},
-	user: function(id) {
-		return cached(this.users, id, 'users.info', 'user', 'real_name');
+	user: function(id, workspace) {
+		return cached(this.users, id, 'users.info', 'user', 'real_name', workspace);
 	},
 	workspace: function(id) {
 		return cached(this.workspaces, id, 'team.info', 'team', 'domain');
 	},
+
+	bootstrap: async function(token) {
+		token = this.token(process.env['TOKEN_' + index]);
+		if(!token)
+			return false;
+
+		var workspace = await call('team.info', null, token);
+		if(!workspace || !workspace.ok)
+			return workspace;
+		this.workspaces[workspace.team.id] = workspace.team.domain;
+		return true;
+	},
 };
+
+const PORT = process.env.PORT;
+if(!PORT) {
+	console.log('Environment is missing $PORT');
+	process.exit(1);
+}
+
+const TOKEN_0 = cache.token(process.env.TOKEN_0);
+if(!TOKEN_0) {
+	console.log('Environment is missing $TOKEN_0 or it is not #-delimited');
+	process.exit(2);
+}
+for(var index = 1; process.env['TOKEN_' + index]; ++index)
+	if(!cache.bootstrap(process.env['TOKEN_' + index])) {
+		console.log('Failed to authenticate with token ' + index);
+		process.exit(3);
+	}
 
 http.createServer(handle_connection).listen(PORT);
 
-async function cached(memo, key, method, parameter, argument) {
+async function cached(memo, key, method, parameter, argument, workspace) {
 	if(!memo[key]) {
-		var lookup = await call(method + '?' + parameter + '=' + key);
+		var lookup = await call(method + '?' + parameter + '=' + key, null, workspace);
 		if(!lookup || !lookup.ok) {
 			console.log('Failed to cache API response: ' + JSON.stringify(lookup));
 			return null;
@@ -66,10 +95,16 @@ async function cached(memo, key, method, parameter, argument) {
 	return memo[key];
 }
 
-function call(method, body) {
+function call(method, body, workspace) {
+	var token = cache.token(workspace);
+	if(!token)
+		token = workspace;
+	if(!token)
+		token = TOKEN_0;
+
 	var header = {
 		headers: {
-			Authorization: 'Bearer ' + TOKEN,
+			Authorization: 'Bearer ' + token,
 		},
 	};
 	var payload = '';
@@ -135,7 +170,7 @@ async function handle_event(event) {
 	console.log(event);
 
 	var workspace = await cache.workspace(event.team);
-	var channel = await cache.channel(event.channel);
+	var channel = await cache.channel(event.channel, workspace);
 	var paired = cache.line(workspace, channel);
 	if(!workspace || !channel || !paired)
 		return;
@@ -144,8 +179,8 @@ async function handle_event(event) {
 		channel: paired.channel,
 		text: event.text,
 	};
-	var user = await cache.user(event.user);
+	var user = await cache.user(event.user, workspace);
 	if(user)
 		message.username = user;
-	console.log(await call('chat.postMessage', message));
+	console.log(await call('chat.postMessage', message, paired.workspace));
 }
