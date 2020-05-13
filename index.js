@@ -55,8 +55,14 @@ const cache = {
 	channel: function(id, workspace) {
 		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
 	},
-	user: function(id, workspace) {
-		return cached(this.users, id, 'users.info', 'user', 'real_name', workspace);
+	user: async function(id, workspace) {
+		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace);
+		if(!profile)
+			return profile;
+		return {
+			name: profile.real_name,
+			avatar: profile.image_512,
+		};
 	},
 	workspace: function(id) {
 		return cached(this.workspaces, id, 'team.info', 'team', 'domain');
@@ -209,13 +215,16 @@ async function handle_event(event) {
 		channel: paired.channel,
 		text: event.text,
 	};
-	var user = await cache.user(event.user, workspace);
-	if(user)
-		message.username = user;
 	if(event.thread_ts) {
 		var copy = cache.message(event.thread_ts);
 		if(copy)
 			message.thread_ts = copy.ts;
+	}
+
+	var user = await cache.user(event.user, workspace);
+	if(user) {
+		message.username = user.name;
+		message.icon_url = user.avatar;
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
