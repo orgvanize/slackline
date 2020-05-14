@@ -144,6 +144,18 @@ function stringify(stream) {
 	});
 }
 
+async function replace(string, regex, async_func) {
+	var futures = [];
+	string.replace(regex, function(...args) {
+		futures.push(async_func(...args));
+	});
+
+	var strings = await Promise.all(futures);
+	return string.replace(regex, function() {
+		return strings.shift();
+	});
+}
+
 async function handle_connection(request, response) {
 	var payload = await stringify(request);
 	if(!payload) {
@@ -219,6 +231,13 @@ async function handle_event(event) {
 	if(user) {
 		message.username = user.name;
 		message.icon_url = user.avatar;
+
+		message.text = await replace(message.text, /<@([A-Z0-9]+)>/g, async function(orig, user) {
+			user = await cache.user(user, workspace);
+			if(user)
+				return '@' + user.name;
+			return orig;
+		});
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
