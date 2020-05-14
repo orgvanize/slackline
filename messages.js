@@ -6,7 +6,7 @@ if(!provision(process.env.DATABASE_URL)) {
 }
 
 function object(key, value) {
-	if(value == undefined)
+	if(value === undefined)
 		return table[key];
 	else if(value == null)
 		return delete table[key];
@@ -19,7 +19,7 @@ function object(key, value) {
 };
 
 async function database(key, value) {
-	if(value == undefined) {
+	if(value === undefined) {
 		var hits = await table.query('SELECT in_workspace, in_channel, out_workspace'
 			+ ', out_channel, out_conversation, out_ts FROM messages WHERE'
 			+ ' in_ts = \'' + key + '\';');
