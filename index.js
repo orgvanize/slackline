@@ -178,11 +178,14 @@ async function handle_event(event) {
 
 	if(event.subtype == 'message_deleted') {
 		var copy = await messages(event.deleted_ts);
-		if(copy)
+		if(copy) {
 			console.log(await call('chat.delete', {
 				channel: copy.out_conversation,
 				ts: copy.out_ts,
 			}, copy.out_workspace));
+			await messages(event.deleted_ts, null);
+			await messages(copy.out_ts, null);
+		}
 		return;
 	} else if(event.subtype == 'message_changed') {
 		var copy = await messages(event.message.ts);
