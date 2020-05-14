@@ -156,6 +156,15 @@ async function replace(string, regex, async_func) {
 	});
 }
 
+function process_users(workspace, message) {
+	return replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
+		user = await cache.user(user, workspace);
+		if(user)
+			return '@' + user.name;
+		return orig;
+	});
+}
+
 async function handle_connection(request, response) {
 	var payload = await stringify(request);
 	if(!payload) {
@@ -201,12 +210,16 @@ async function handle_event(event) {
 		return;
 	} else if(event.subtype == 'message_changed') {
 		var copy = await messages(event.message.ts);
-		if(copy)
-			console.log(await call('chat.update', {
+		if(copy) {
+			var message = {
 				channel: copy.out_conversation,
 				ts: copy.out_ts,
 				text: event.message.text,
-			}, copy.out_workspace));
+			};
+			if(await cache.user(event.message.user, workspace))
+				message.text = await process_users(workspace, message.text);
+			console.log(await call('chat.update', message, copy.out_workspace));
+		}
 		return;
 	}
 
@@ -232,12 +245,7 @@ async function handle_event(event) {
 		message.username = user.name;
 		message.icon_url = user.avatar;
 
-		message.text = await replace(message.text, /<@([A-Z0-9]+)>/g, async function(orig, user) {
-			user = await cache.user(user, workspace);
-			if(user)
-				return '@' + user.name;
-			return orig;
-		});
+		message.text = await process_users(workspace, message.text);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
