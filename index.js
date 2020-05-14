@@ -257,8 +257,11 @@ async function handle_event(event) {
 	if(event.thread_ts) {
 		var copy = await messages(event.thread_ts);
 		console.log(copy);
-		if(copy)
+		if(copy) {
 			message.thread_ts = copy.out_ts;
+			if(event.subtype == 'thread_broadcast')
+				message.reply_broadcast = true;
+		}
 	}
 
 	var user = await cache.user(event.user, workspace);
