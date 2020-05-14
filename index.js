@@ -1,5 +1,6 @@
 const http = require('http');
 const https = require('https');
+const messages = require('./messages');
 
 const cache = {
 	lines: {},
@@ -36,17 +37,6 @@ const cache = {
 		else if(workspace.length == 2)
 			this.tokens[workspace[0]] = workspace[1];
 		return this.tokens[workspace[0]]
-	},
-
-	messages: {},
-	message: function(ts, workspace, channel, echots) {
-		if(!this.messages[ts])
-			this.messages[ts] = {
-				workspace: workspace,
-				channel: channel,
-				ts: echots,
-			};
-		return this.messages[ts];
 	},
 
 	channels: {},
@@ -187,21 +177,21 @@ async function handle_event(event) {
 	console.log(event);
 
 	if(event.subtype == 'message_deleted') {
-		var copy = cache.message(event.deleted_ts);
+		var copy = await messages(event.deleted_ts);
 		if(copy)
 			console.log(await call('chat.delete', {
-				channel: copy.channel,
-				ts: copy.ts,
-			}, copy.workspace));
+				channel: copy.out_conversation,
+				ts: copy.out_ts,
+			}, copy.out_workspace));
 		return;
 	} else if(event.subtype == 'message_changed') {
-		var copy = cache.message(event.message.ts);
+		var copy = await messages(event.message.ts);
 		if(copy)
 			console.log(await call('chat.update', {
-				channel: copy.channel,
-				ts: copy.ts,
+				channel: copy.out_conversation,
+				ts: copy.out_ts,
 				text: event.message.text,
-			}, copy.workspace));
+			}, copy.out_workspace));
 		return;
 	}
 
@@ -216,9 +206,10 @@ async function handle_event(event) {
 		text: event.text,
 	};
 	if(event.thread_ts) {
-		var copy = cache.message(event.thread_ts);
+		var copy = await messages(event.thread_ts);
+		console.log(copy);
 		if(copy)
-			message.thread_ts = copy.ts;
+			message.thread_ts = copy.out_ts;
 	}
 
 	var user = await cache.user(event.user, workspace);
@@ -229,6 +220,20 @@ async function handle_event(event) {
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
 	console.log(ack);
-	cache.message(event.ts, paired.workspace, ack.channel, ack.ts);
-	cache.message(ack.ts, workspace, event.channel, event.ts);
+	await messages(event.ts, {
+		in_workspace: workspace,
+		in_channel: channel,
+		out_workspace: paired.workspace,
+		out_channel: paired.channel,
+		out_conversation: ack.channel,
+		out_ts: ack.ts,
+	});
+	await messages(ack.ts, {
+		in_workspace: paired.workspace,
+		in_channel: paired.workspace,
+		out_workspace: workspace,
+		out_channel: channel,
+		out_conversation: event.channel,
+		out_ts: event.ts,
+	});
 }
