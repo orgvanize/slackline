@@ -41,6 +41,7 @@ const cache = {
 
 	channels: {},
 	users: {},
+	teams: {},
 	workspaces: {},
 	channel: function(id, workspace) {
 		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
@@ -53,6 +54,9 @@ const cache = {
 			name: profile.real_name,
 			avatar: profile.image_512,
 		};
+	},
+	team: function(chanid) {
+		return this.teams[chanid];
 	},
 	workspace: function(id) {
 		return cached(this.workspaces, id, 'team.info', 'team', 'domain');
@@ -67,6 +71,13 @@ const cache = {
 		if(!workspace || !workspace.ok)
 			return workspace;
 		this.workspaces[workspace.team.id] = workspace.team.domain;
+
+		var channels = await call('conversations.list?types=public_channel,private_channel', null, token);
+		if(!channels.ok)
+			console.log('Missing OAuth scope channels:read and/or groups:read?');
+		for(var channel of channels.channels)
+			this.teams[channel.id] = workspace.team.id;
+
 		return true;
 	},
 };
@@ -83,7 +94,7 @@ if(!TOKEN_0) {
 	console.log('Environment is missing $TOKEN_0 or it is not #-delimited');
 	process.exit(2);
 }
-for(var index = 1; process.env['TOKEN_' + index]; ++index)
+for(var index = 0; process.env['TOKEN_' + index]; ++index)
 	if(!cache.bootstrap(process.env['TOKEN_' + index])) {
 		console.log('Failed to authenticate with token ' + index);
 		process.exit(3);
@@ -204,6 +215,7 @@ async function handle_event(event) {
 		return;
 	console.log(event);
 
+	var team = event.team;
 	if(event.subtype == 'message_deleted') {
 		var copy = await messages(event.deleted_ts);
 		if(copy) {
@@ -229,9 +241,10 @@ async function handle_event(event) {
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
 		return;
-	}
+	} else if(event.subtype == 'thread_broadcast')
+		team = cache.team(event.channel);
 
-	var workspace = await cache.workspace(event.team);
+	var workspace = await cache.workspace(team);
 	var channel = await cache.channel(event.channel, workspace);
 	var paired = cache.line(workspace, channel);
 	if(!workspace || !channel || !paired)
