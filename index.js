@@ -206,18 +206,29 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 			return '`@' + user.name + '`';
 		return orig;
 	});
+
+	var mismatches = [];
+	var matches;
 	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
 		uid = await cache.uid(user, out_workspace);
 		if(!Array.isArray(uid))
 			return '<@' + uid + '>';
-		else
-			warning(in_workspace, in_channel, in_user,
-				'*Warning:* Could not find anyone by the name \'' + user + '\'!'
-				+ '\nMaybe you meant one of these people:'
-				+ '\n* `@' + uid.join('`\n* `@') + '`\n'
-				+ '_If so, edit your message so they will be notified!_');
+		else {
+			mismatches.push(user);
+			if(!matches)
+				matches = uid;
+		}
 		return orig;
 	});
+
+	if(mismatches.length)
+		await warning(in_workspace, in_channel, in_user,
+			'*Warning:* Could not find anyone by the name(s) \''
+			+ mismatches.join('\', \'') + '\'!'
+			+ '\nMaybe you meant one of these people:'
+			+ '\n* `@' + matches.join('`\n* `@') + '`\n'
+			+ '_If so, edit your message so they will be notified!_');
+
 	return message;
 }
 
