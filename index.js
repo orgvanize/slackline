@@ -268,7 +268,7 @@ async function handle_event(event) {
 	});
 	await messages(ack.ts, {
 		in_workspace: paired.workspace,
-		in_channel: paired.workspace,
+		in_channel: paired.channel,
 		out_workspace: workspace,
 		out_channel: channel,
 		out_conversation: event.channel,
