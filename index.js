@@ -340,6 +340,8 @@ async function handle_event(event) {
 		channel: paired.channel,
 		text: event.text,
 	};
+	if(event.attachments)
+		message.attachments = event.attachments;
 	if(event.thread_ts) {
 		var copy = await messages(event.thread_ts);
 		console.log(copy);
