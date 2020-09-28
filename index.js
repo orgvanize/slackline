@@ -4,13 +4,14 @@ const messages = require('./messages');
 
 const cache = {
 	lines: {},
-	line: function(workspace, channel) {
+	line: function(workspace, channel, quiet) {
 		var id = workspace + '#' + channel;
 		if(!this.lines[id]) {
 			var iable = 'LINE_' + workspace + '_' + channel;
 			var other = process.env[iable];
 			if(!other) {
-				console.log('Environment is missing $' + iable);
+				if(!quiet)
+					console.log('Environment is missing $' + iable);
 				return null;
 			}
 
@@ -76,7 +77,8 @@ const cache = {
 		if(!channels.ok)
 			console.log('Missing OAuth scope channels:read and/or groups:read?');
 		for(var channel of channels.channels)
-			this.teams[channel.id] = workspace.team.id;
+			if(this.line(workspace.team.domain, channel.name, true))
+				this.teams[channel.id] = workspace.team.id;
 
 		return true;
 	},
