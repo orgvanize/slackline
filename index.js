@@ -49,7 +49,14 @@ const cache = {
 		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
 	},
 	uid: function(name, workspace) {
-		return this.uids[workspace + '#' + name];
+		var user = this.uids[workspace + '#' + name];
+		if(user)
+			return user;
+		return Object.keys(this.uids).filter(function(each) {
+			return each.startsWith(workspace + '#');
+		}).map(function(each) {
+			return each.replace(/.*#/, '');
+		}).sort();
 	},
 	user: async function(id, workspace) {
 		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace);
@@ -192,7 +199,7 @@ async function replace(string, regex, async_func) {
 	});
 }
 
-async function process_users(in_workspace, out_workspace, message) {
+async function process_users(in_workspace, in_channel, in_user, message, out_workspace) {
 	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
 		user = await cache.user(user, in_workspace);
 		if(user)
@@ -200,12 +207,26 @@ async function process_users(in_workspace, out_workspace, message) {
 		return orig;
 	});
 	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
-		user = await cache.uid(user, out_workspace);
-		if(user)
-			return '<@' + user + '>';
+		uid = await cache.uid(user, out_workspace);
+		if(!Array.isArray(uid))
+			return '<@' + uid + '>';
+		else
+			warning(in_workspace, in_channel, in_user,
+				'*Warning:* Could not find anyone by the name \'' + user + '\'!'
+				+ '\nMaybe you meant one of these people:'
+				+ '\n* `@' + uid.join('`\n* `@') + '`\n'
+				+ '_If so, edit your message so they will be notified!_');
 		return orig;
 	});
 	return message;
+}
+
+function warning(workspace, channel, user, text) {
+	return call('chat.postEphemeral', {
+		channel: channel,
+		user: user,
+		text: text,
+	}, workspace);
 }
 
 async function handle_connection(request, response) {
@@ -271,7 +292,8 @@ async function handle_event(event) {
 			};
 			if(event.message.user)
 				await cache.user(event.message.user, workspace);
-			message.text = await process_users(workspace, copy.out_workspace, message.text);
+			message.text = await process_users(workspace, event.channel, event.message.user,
+				message.text, copy.out_workspace);
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
 		return;
@@ -304,7 +326,8 @@ async function handle_event(event) {
 		message.username = user.name;
 		message.icon_url = user.avatar;
 
-		message.text = await process_users(workspace, paired.workspace, message.text);
+		message.text = await process_users(workspace, event.channel, event.user,
+			message.text, paired.workspace);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
