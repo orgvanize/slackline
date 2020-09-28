@@ -192,13 +192,20 @@ async function replace(string, regex, async_func) {
 	});
 }
 
-function process_users(workspace, message) {
-	return replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
-		user = await cache.user(user, workspace);
+async function process_users(in_workspace, out_workspace, message) {
+	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
+		user = await cache.user(user, in_workspace);
 		if(user)
 			return '`@' + user.name + '`';
 		return orig;
 	});
+	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
+		user = await cache.uid(user, out_workspace);
+		if(user)
+			return '<@' + user + '>';
+		return orig;
+	});
+	return message;
 }
 
 async function handle_connection(request, response) {
@@ -261,7 +268,7 @@ async function handle_event(event) {
 			};
 			if(event.message.user)
 				await cache.user(event.message.user, workspace);
-			message.text = await process_users(workspace, message.text);
+			message.text = await process_users(workspace, copy.out_workspace, message.text);
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
 		return;
@@ -293,7 +300,7 @@ async function handle_event(event) {
 		message.username = user.name;
 		message.icon_url = user.avatar;
 
-		message.text = await process_users(workspace, message.text);
+		message.text = await process_users(workspace, paired.workspace, message.text);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
