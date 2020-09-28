@@ -200,10 +200,13 @@ async function replace(string, regex, async_func) {
 }
 
 async function process_users(in_workspace, in_channel, in_user, message, out_workspace) {
+	var locals = {};
 	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
 		user = await cache.user(user, in_workspace);
-		if(user)
+		if(user) {
+			locals[user.name] = true;
 			return '`@' + user.name + '`';
+		}
 		return orig;
 	});
 
@@ -221,6 +224,9 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 		return orig;
 	});
 
+	mismatches = mismatches.filter(function(each) {
+		return !locals[each];
+	});
 	if(mismatches.length)
 		await warning(in_workspace, in_channel, in_user,
 			'*Warning:* Could not find anyone by the name(s) \''
