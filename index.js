@@ -292,6 +292,12 @@ async function handle_event(event) {
 			'*Warning:* Emoji reactions are currently unsupported.'
 			+ '\n_If you want the other channel to see, send an emoji message!_');
 		return;
+	} else if(event.subtype == 'file_share') {
+		var workspace = await cache.workspace(await cache.team(event.channel));
+		warning(workspace, event.channel, event.user,
+			'*Warning:* File uploads are currently unsupported.'
+			+ '\n_If you want the other channel to see, link to cloud storage instead!_');
+		return;
 	} else if(event.type != 'message') {
 		console.log('unhandled type in event: ' + JSON.stringify(event));
 		return;
