@@ -191,7 +191,7 @@ function process_users(workspace, message) {
 	return replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
 		user = await cache.user(user, workspace);
 		if(user)
-			return '@' + user.name;
+			return '`@' + user.name + '`';
 		return orig;
 	});
 }
