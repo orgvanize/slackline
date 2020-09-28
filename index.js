@@ -77,8 +77,25 @@ const cache = {
 		if(!channels.ok)
 			console.log('Missing OAuth scope channels:read and/or groups:read?');
 		for(var channel of channels.channels)
-			if(this.line(workspace.team.domain, channel.name, true))
+			if(this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
+
+				var members = [];
+				var method = 'conversations.members?channel=' + channel.id;
+				var cursor = '';
+				do {
+					var it = await call(method + cursor, null, token);
+					members = members.concat(it.members);
+					if(it.response_metadata && it.response_metadata.next_cursor) {
+						cursor = it.response_metadata.next_cursor;
+						cursor = cursor.replace(/=/g, '%3D');
+						cursor = '&cursor=' + cursor;
+					} else
+						cursor = '';
+				} while(cursor);
+				for(var member of members)
+					await this.user(member, workspace.team.domain);
+			}
 
 		return true;
 	},
