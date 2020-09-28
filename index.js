@@ -200,7 +200,7 @@ async function handle_event(event) {
 	if(event.type != 'message') {
 		console.log('unhandled type in event: ' + event);
 		return;
-	} else if(event.bot_id)
+	} else if(event.bot_id || (event.message && event.message.bot_id))
 		return;
 	console.log(event);
 
