@@ -200,6 +200,12 @@ async function replace(string, regex, async_func) {
 }
 
 async function process_users(in_workspace, in_channel, in_user, message, out_workspace) {
+	if(message.startsWith('@') || message.search(/[^<`]@/) != -1)
+		await warning(in_workspace, in_channel, in_user,
+			'*Warning:* If you want to tag someone in the bridged channel,'
+			+ ' you must enclose the mention in backticks (e.g., `@Their Name`).'
+			+ '\n_Edit your message if you wish to notify people!_');
+
 	var locals = {};
 	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
 		user = await cache.user(user, in_workspace);
