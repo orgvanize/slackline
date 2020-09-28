@@ -286,6 +286,12 @@ async function handle_event(event) {
 	if(event.type == 'member_joined_channel') {
 		handle_join(event);
 		return;
+	} else if(event.type == 'reaction_added') {
+		var workspace = await cache.workspace(await cache.team(event.item.channel));
+		warning(workspace, event.item.channel, event.user,
+			'*Warning:* Emoji reactions are currently unsupported.'
+			+ '\n_If you want the other channel to see, send an emoji message!_');
+		return;
 	} else if(event.type != 'message') {
 		console.log('unhandled type in event: ' + JSON.stringify(event));
 		return;
