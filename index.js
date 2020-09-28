@@ -275,7 +275,8 @@ async function handle_event(event) {
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
 		return;
-	} else if(event.subtype == 'thread_broadcast')
+	} else if(event.subtype && (event.subtype == 'thread_broadcast'
+		|| event.subtype.endsWith('_join') || event.subtype.endsWith('_leave')))
 		team = cache.team(event.channel);
 
 	var workspace = await cache.workspace(team);
