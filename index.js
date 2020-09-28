@@ -239,7 +239,10 @@ async function handle_connection(request, response) {
 }
 
 async function handle_event(event) {
-	if(event.type != 'message') {
+	if(event.type == 'member_joined_channel') {
+		handle_join(event);
+		return;
+	} else if(event.type != 'message') {
 		console.log('unhandled type in event: ' + event);
 		return;
 	} else if(event.bot_id || (event.message && event.message.bot_id))
@@ -321,4 +324,9 @@ async function handle_event(event) {
 		out_conversation: event.channel,
 		out_ts: event.ts,
 	});
+}
+
+async function handle_join(event) {
+	var workspace = await cache.workspace(event.team);
+	await cache.user(event.user, workspace);
 }
