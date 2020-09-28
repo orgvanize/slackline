@@ -287,7 +287,7 @@ async function handle_event(event) {
 		handle_join(event);
 		return;
 	} else if(event.type != 'message') {
-		console.log('unhandled type in event: ' + event);
+		console.log('unhandled type in event: ' + JSON.stringify(event));
 		return;
 	} else if(event.bot_id || (event.message && event.message.bot_id))
 		return;
