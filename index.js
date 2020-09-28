@@ -70,6 +70,7 @@ const cache = {
 		return true;
 	},
 };
+const dedup = {};
 
 const PORT = process.env.PORT;
 if(!PORT) {
@@ -167,6 +168,12 @@ function process_users(workspace, message) {
 
 async function handle_connection(request, response) {
 	var payload = await stringify(request);
+	if(dedup[payload]) {
+		console.log('Acknowledging duplicate request');
+		return response.end();
+	}
+	dedup[payload] = true;
+
 	if(!payload) {
 		console.log('Empty request payload');
 		return response.end('Empty request payload');
