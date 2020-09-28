@@ -41,16 +41,21 @@ const cache = {
 	},
 
 	channels: {},
+	uids: {},
 	users: {},
 	teams: {},
 	workspaces: {},
 	channel: function(id, workspace) {
 		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
 	},
+	uid: function(name, workspace) {
+		return this.uids[workspace + '#' + name];
+	},
 	user: async function(id, workspace) {
 		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace);
 		if(!profile)
 			return profile;
+		this.uids[workspace + '#' + profile.real_name] = id;
 		return {
 			name: profile.real_name,
 			avatar: profile.image_512,
