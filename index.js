@@ -23,7 +23,7 @@ const cache = {
 	line: function(workspace, channel, quiet) {
 		var id = workspace + '#' + channel;
 		if(!this.lines[id]) {
-			var iable = 'LINE_' + workspace + '_' + channel;
+			var iable = 'LINE_' + escaped(workspace) + '_' + escaped(channel);
 			var other = process.env[iable];
 			if(!other) {
 				if(!quiet)
@@ -188,6 +188,10 @@ function call(method, body, workspace) {
 	});
 	request.end(payload);
 	return response;
+}
+
+function escaped(varname) {
+	return varname.replace(/-/g, '__hyphen__');
 }
 
 function stringify(stream) {
