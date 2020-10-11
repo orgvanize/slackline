@@ -318,13 +318,13 @@ async function handle_event(event) {
 		handle_join(event);
 		return;
 	} else if(event.type == 'reaction_added') {
-		var workspace = await cache.workspace(await cache.team(event.item.channel));
+		var workspace = await cache.workspace(cache.team(event.item.channel));
 		warning(workspace, event.item.channel, event.user,
 			'*Warning:* Emoji reactions are currently unsupported.'
 			+ '\n_If you want the other channel to see, send an emoji message!_');
 		return;
 	} else if(event.subtype == 'file_share') {
-		var workspace = await cache.workspace(await cache.team(event.channel));
+		var workspace = await cache.workspace(cache.team(event.channel));
 		warning(workspace, event.channel, event.user,
 			'*Warning:* File uploads are currently unsupported.'
 			+ '\n_If you want the other channel to see, link to cloud storage instead!_');
