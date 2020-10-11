@@ -92,7 +92,7 @@ const cache = {
 	},
 
 	bootstrap: async function(token) {
-		token = this.token(process.env['TOKEN_' + index]);
+		token = this.token(token);
 		if(!token)
 			return false;
 
