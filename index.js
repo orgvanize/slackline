@@ -20,7 +20,7 @@ const messages = require('./messages');
 
 const cache = {
 	lines: {},
-	line: function(workspace, channel, quiet) {
+	line: function(workspace, channel, quiet = false) {
 		var id = workspace + '#' + channel;
 		if(!this.lines[id]) {
 			var iable = 'LINE_' + escaped(workspace) + '_' + escaped(channel);
