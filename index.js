@@ -101,10 +101,11 @@ const cache = {
 			return workspace;
 		this.workspaces[workspace.team.id] = workspace.team.domain;
 
-		var channels = await call('conversations.list?types=public_channel,private_channel', null, token);
-		if(!channels.ok)
+		var channels = await collect_call('conversations.list?types=public_channel,private_channel',
+			null, 'channels', token);
+		if(!channels)
 			console.log('Missing OAuth scope channels:read and/or groups:read?');
-		for(var channel of channels.channels)
+		for(var channel of channels)
 			if(this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
 
