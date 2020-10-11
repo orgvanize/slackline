@@ -108,19 +108,8 @@ const cache = {
 			if(this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
 
-				var members = [];
-				var method = 'conversations.members?channel=' + channel.id;
-				var cursor = '';
-				do {
-					var it = await call(method + cursor, null, token);
-					members = members.concat(it.members);
-					if(it.response_metadata && it.response_metadata.next_cursor) {
-						cursor = it.response_metadata.next_cursor;
-						cursor = cursor.replace(/=/g, '%3D');
-						cursor = '&cursor=' + cursor;
-					} else
-						cursor = '';
-				} while(cursor);
+				var members = await collect_call('conversations.members?channel=' + channel.id,
+					null, 'members', token);
 				for(var member of members)
 					await this.user(member, workspace.team.domain);
 			}
@@ -188,6 +177,27 @@ function call(method, body, workspace) {
 	});
 	request.end(payload);
 	return response;
+}
+
+async function collect_call(method, body, array, workspace) {
+	var collected = [];
+	var cursor = '';
+	var delim = '?';
+	if(method.indexOf('?') != -1)
+		delim = '&';
+	do {
+		var it = await call(method + cursor, body, workspace);
+		if(!it.ok)
+			return null;
+
+		collected = collected.concat(it[array]);
+		if(it.response_metadata && it.response_metadata.next_cursor) {
+			cursor = it.response_metadata.next_cursor;
+			cursor = delim + 'cursor=' + cursor.replace(/=/g, '%3D');
+		} else
+			cursor = '';
+	} while(cursor);
+	return collected;
 }
 
 function escaped(varname) {
