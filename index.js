@@ -144,6 +144,7 @@ async function cached(memo, key, method, parameter, argument, workspace) {
 		var lookup = await call(method + '?' + parameter + '=' + key, null, workspace);
 		if(!lookup || !lookup.ok) {
 			console.log('Failed to cache API response: ' + JSON.stringify(lookup));
+			console.trace();
 			return null;
 		}
 		memo[key] = lookup[parameter][argument];
