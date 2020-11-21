@@ -329,7 +329,6 @@ async function handle_event(event) {
 		warning(workspace, event.channel, event.user,
 			'*Warning:* File uploads are currently unsupported.'
 			+ '\n_If you want the other channel to see, link to cloud storage instead!_');
-		return;
 	} else if(event.type != 'message') {
 		console.log('unhandled type in event: ' + JSON.stringify(event));
 		return;
@@ -365,7 +364,8 @@ async function handle_event(event) {
 		}
 		return;
 	} else if(event.subtype && (event.subtype == 'thread_broadcast'
-		|| event.subtype.endsWith('_join') || event.subtype.endsWith('_leave')))
+		|| event.subtype.endsWith('_join') || event.subtype.endsWith('_leave')
+		|| event.subtype == 'file_share'))
 		team = cache.team(event.channel);
 
 	var workspace = await cache.workspace(team);
