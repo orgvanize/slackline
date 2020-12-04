@@ -17,6 +17,7 @@
 const http = require('http');
 const https = require('https');
 const messages = require('./messages');
+const querystring = require('querystring');
 
 const cache = {
 	lines: {},
@@ -296,9 +297,15 @@ async function handle_connection(request, response) {
 		console.log('Empty request payload');
 		return response.end('Empty request payload');
 	}
-	payload = JSON.parse(payload);
+
+	if(payload.startsWith('{'))
+		payload = JSON.parse(payload);
+	else
+		payload = querystring.parse(payload);
 
 	switch(payload.type) {
+	case undefined:
+		return response.end(await handle_command(payload));
 	case 'event_callback':
 		if(!payload.event) {
 			console.log('event_callback without associated event in payload: ' + payload);
@@ -311,6 +318,21 @@ async function handle_connection(request, response) {
 	default:
 		console.log('Unhandled request type in payload: ' + payload);
 		return response.end('Unhandled request type: \'' + payload.type + '\'');
+	}
+}
+
+async function handle_command(payload) {
+	var command = payload.text.replace(/\s.*/, '');
+	var args = payload.text.replace(/\S+\s*/, '');
+	var message = '';
+	switch(command) {
+	default:
+		message = '*Error:* Unrecognized command: \'' + command + '\'\n';
+	case 'help':
+		message += 'Supported commands:\n'
+			+ '`help`: Show this help\n'
+			+ '`list [channel]`: List bridged members of current channel (or specified [channel])';
+		return message;
 	}
 }
 
