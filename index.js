@@ -391,8 +391,8 @@ async function handle_event(event) {
 				text: event.message.text,
 			};
 			if(event.message.user)
-				await cache.user(event.message.user, workspace);
-			message.text = await process_users(workspace, event.channel, event.message.user,
+				await cache.user(event.message.user, copy.in_workspace);
+			message.text = await process_users(copy.in_workspace, event.channel, event.message.user,
 				message.text, copy.out_workspace);
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
