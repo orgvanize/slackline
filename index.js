@@ -328,6 +328,7 @@ async function handle_command(payload) {
 	var error = '';
 	switch(command) {
 	case 'list':
+	case '':
 		var channel = payload.channel_name;
 		if(args)
 			channel = args;
