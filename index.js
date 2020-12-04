@@ -331,11 +331,16 @@ async function handle_command(payload) {
 	var args = payload.text.replace(/\S+\s*/, '');
 	var error = '';
 	switch(command) {
+	case 'dm':
 	case 'list':
-	case '':
 		var channel = payload.channel_name;
-		if(args)
+		if(args && command == 'list')
 			channel = args;
+
+		var argv = args.split(' - ');
+		args = argv[0];
+		if(argv.length > 1)
+			channel = argv[1];
 
 		var paired = await cache.line(payload.team_domain, channel);
 		if(!paired) {
@@ -344,15 +349,30 @@ async function handle_command(payload) {
 		}
 		if(!paired)
 			return '*Error:* Unpaired channel: \'' + channel + '\'';
-		return 'Members bridged with channel \'' + channel + '\':\n'
-			+ await list_users(paired.workspace, paired.channel);
+		if(command == 'list')
+			return 'Members bridged with channel \'' + channel + '\':\n'
+				+ await list_users(paired.workspace, paired.channel);
+		if(!args)
+			return '*Error:* You must specify a user to direct message! See `help`.';
+
+		var uid = await cache.uid(args, paired.channel, paired.workspace);
+		if(Array.isArray(uid))
+			return '*Error:* Could not find anyone by the name \''
+				+ args + '\'!'
+				+ '\nMaybe you meant one of these people:\n'
+				+ (await list_users(paired.workspace, paired.channel)).replace(/@/g, '');
+		await warning(payload.team_domain, payload.user_id, payload.user_id,
+			'You are now DM\'ing `@' + args + '`.\n'
+			+ '_To change this, use_ *' + payload.command + 'dm* _at any time._');
+		return '';
 
 	default:
 		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
 	case 'help':
 		error += 'Supported commands:\n'
 			+ '`help`: Show this help\n'
-			+ '`list [channel]`: List bridged members of current channel (or specified [channel])';
+			+ '`list [channel]`: List bridged members of current channel (or specified [channel])\n'
+			+ '`dm <user> - [channel]`: Direct message specified <user> (bridged via [channel])';
 		return error;
 	}
 }
