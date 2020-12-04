@@ -65,21 +65,21 @@ const cache = {
 	channel: function(id, workspace) {
 		return cached(this.channels, id, 'conversations.info', 'channel', 'name', workspace);
 	},
-	uid: function(name, workspace) {
-		var user = this.uids[workspace + '#' + name];
+	uid: function(name, channel, workspace) {
+		var user = this.uids[workspace + '#' + channel + '#' + name];
 		if(user)
 			return user;
 		return Object.keys(this.uids).filter(function(each) {
-			return each.startsWith(workspace + '#');
+			return each.startsWith(workspace + '#' + channel + '#');
 		}).map(function(each) {
 			return each.replace(/.*#/, '');
 		}).sort();
 	},
-	user: async function(id, workspace) {
+	user: async function(id, channel, workspace) {
 		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace);
 		if(!profile)
 			return profile;
-		this.uids[workspace + '#' + profile.real_name] = id;
+		this.uids[workspace + '#' + channel + '#' + profile.real_name] = id;
 		return {
 			name: profile.real_name,
 			avatar: profile.image_512,
@@ -113,7 +113,7 @@ const cache = {
 				var members = await collect_call('conversations.members?channel=' + channel.id,
 					null, 'members', token);
 				for(var member of members)
-					await this.user(member, workspace.team.domain);
+					await this.user(member, channel.name, workspace.team.domain);
 			}
 
 		return true;
@@ -232,7 +232,7 @@ async function replace(string, regex, async_func) {
 	});
 }
 
-async function process_users(in_workspace, in_channel, in_user, message, out_workspace) {
+async function process_users(in_workspace, in_channel, in_user, message, out_workspace, out_channel) {
 	if(message.startsWith('@') || message.search(/[^<`]@/) != -1)
 		await warning(in_workspace, in_channel, in_user,
 			'*Warning:* If you want to tag someone in the bridged channel,'
@@ -241,7 +241,7 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 
 	var locals = {};
 	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
-		user = await cache.user(user, in_workspace);
+		user = await cache.user(user, in_channel, in_workspace);
 		if(user) {
 			locals[user.name] = true;
 			return '`@' + user.name + '`';
@@ -251,7 +251,7 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 
 	var mismatches = [];
 	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
-		var uid = await cache.uid(user, out_workspace);
+		var uid = await cache.uid(user, out_channel, out_workspace);
 		if(!Array.isArray(uid))
 			return '<@' + uid + '>';
 
@@ -267,14 +267,14 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 			'*Warning:* Could not find anyone by the name(s) \''
 			+ mismatches.join('\', \'') + '\'!'
 			+ '\nMaybe you meant one of these people:'
-			+ '\n' + await list_users(out_workspace) + '\n'
+			+ '\n' + await list_users(out_workspace, out_channel) + '\n'
 			+ '_If so, edit your message so they will be notified!_');
 
 	return message;
 }
 
-async function list_users(workspace) {
-	var users = await cache.uid('', workspace);
+async function list_users(workspace, channel) {
+	var users = await cache.uid('', channel, workspace);
 	return '`@' + users.join('`\n`@') + '`';
 }
 
@@ -336,7 +336,8 @@ async function handle_command(payload) {
 		var paired = await cache.line(payload.team_domain, channel);
 		if(!paired)
 			return '*Error:* Unpaired channel: \'' + channel + '\'';
-		return 'Members bridged with channel \'' + channel + '\':\n' + await list_users(paired.workspace);
+		return 'Members bridged with channel \'' + channel + '\':\n'
+			+ await list_users(paired.workspace, paired.channel);
 
 	default:
 		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
@@ -391,9 +392,9 @@ async function handle_event(event) {
 				text: event.message.text,
 			};
 			if(event.message.user)
-				await cache.user(event.message.user, copy.in_workspace);
-			message.text = await process_users(copy.in_workspace, event.channel, event.message.user,
-				message.text, copy.out_workspace);
+				await cache.user(event.message.user, copy.in_channel, copy.in_workspace);
+			message.text = await process_users(copy.in_workspace, copy.in_channel, event.message.user,
+				message.text, copy.out_workspace, copy.out_channel);
 			console.log(await call('chat.update', message, copy.out_workspace));
 		}
 		return;
@@ -424,13 +425,13 @@ async function handle_event(event) {
 		}
 	}
 
-	var user = await cache.user(event.user, workspace);
+	var user = await cache.user(event.user, channel, workspace);
 	if(user) {
 		message.username = user.name;
 		message.icon_url = user.avatar;
 
-		message.text = await process_users(workspace, event.channel, event.user,
-			message.text, paired.workspace);
+		message.text = await process_users(workspace, channel, event.user,
+			message.text, paired.workspace, paired.channel);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
@@ -455,5 +456,6 @@ async function handle_event(event) {
 
 async function handle_join(event) {
 	var workspace = await cache.workspace(event.team);
-	await cache.user(event.user, workspace);
+	var channel = await cache.channel(event.channel, workspace);
+	await cache.user(event.user, channel, workspace);
 }
