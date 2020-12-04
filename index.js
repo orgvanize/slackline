@@ -132,12 +132,12 @@ if(!PORT) {
 const TOKEN_0 = cache.token(process.env.TOKEN_0);
 if(!TOKEN_0) {
 	console.log('Environment is missing $TOKEN_0 or it is not #-delimited');
-	process.exit(2);
+	console.log('Only URL verification is supported in this configuration');
 }
 for(var index = 0; process.env['TOKEN_' + index]; ++index)
 	if(!cache.bootstrap(process.env['TOKEN_' + index])) {
 		console.log('Failed to authenticate with token ' + index);
-		process.exit(3);
+		process.exit(2);
 	}
 
 http.createServer(handle_connection).listen(PORT);
