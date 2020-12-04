@@ -75,11 +75,13 @@ const cache = {
 			return each.replace(/.*#/, '');
 		}).sort();
 	},
-	user: async function(id, channel, workspace) {
-		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace);
+	user: async function(id, channel, workspace, update = true) {
+		var profile = await cached(this.users, id, 'users.info', 'user', 'profile', workspace, update);
 		if(!profile)
 			return profile;
-		this.uids[workspace + '#' + channel + '#' + profile.real_name] = id;
+
+		if(update)
+			this.uids[workspace + '#' + channel + '#' + profile.real_name] = id;
 		return {
 			name: profile.real_name,
 			avatar: profile.image_512,
@@ -140,7 +142,7 @@ for(var index = 0; process.env['TOKEN_' + index]; ++index)
 
 http.createServer(handle_connection).listen(PORT);
 
-async function cached(memo, key, method, parameter, argument, workspace) {
+async function cached(memo, key, method, parameter, argument, workspace, update = true) {
 	if(!memo[key]) {
 		var lookup = await call(method + '?' + parameter + '=' + key, null, workspace);
 		if(!lookup || !lookup.ok) {
@@ -148,7 +150,8 @@ async function cached(memo, key, method, parameter, argument, workspace) {
 			console.trace();
 			return null;
 		}
-		memo[key] = lookup[parameter][argument];
+		if(update)
+			memo[key] = lookup[parameter][argument];
 	}
 	return memo[key];
 }
@@ -241,7 +244,8 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 
 	var locals = {};
 	message = await replace(message, /<@([A-Z0-9]+)>/g, async function(orig, user) {
-		user = await cache.user(user, in_channel, in_workspace);
+		// Skip updating cache because it is possible to mention a user not in the channel!
+		user = await cache.user(user, in_channel, in_workspace, false);
 		if(user) {
 			locals[user.name] = true;
 			return '`@' + user.name + '`';
