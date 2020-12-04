@@ -325,15 +325,25 @@ async function handle_connection(request, response) {
 async function handle_command(payload) {
 	var command = payload.text.replace(/\s.*/, '');
 	var args = payload.text.replace(/\S+\s*/, '');
-	var message = '';
+	var error = '';
 	switch(command) {
+	case 'list':
+		var channel = payload.channel_name;
+		if(args)
+			channel = args;
+
+		var paired = await cache.line(payload.team_domain, channel);
+		if(!paired)
+			return '*Error:* Unpaired channel: \'' + channel + '\'';
+		return 'Members bridged with channel \'' + channel + '\':\n' + await list_users(paired.workspace);
+
 	default:
-		message = '*Error:* Unrecognized command: \'' + command + '\'\n';
+		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
 	case 'help':
-		message += 'Supported commands:\n'
+		error += 'Supported commands:\n'
 			+ '`help`: Show this help\n'
 			+ '`list [channel]`: List bridged members of current channel (or specified [channel])';
-		return message;
+		return error;
 	}
 }
 
