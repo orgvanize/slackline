@@ -1,36 +1,46 @@
 Slackline: a bot to bridge channels between *free* Slack workspaces
 =========
 
+Launch the server:
+ 1. If persistence is desired (required for production), set up a PostgresSQL database.
+ 2. To enable persistence so threading, editing, and deletion work after a restart, export variable:
+    $ export DATABASE_URL=postgres://<path>
+ 3. Start the server by executing:
+    $ PORT=<port> npm start
+ 4. Take note of the fully-qualified URL and port at which you are running the server.
+
 For each workspace you want to bridge, do the following:
  1. Navigate to https://api.slack.com/apps and hit Create New App.
  2. Choose an App Name (e.g., Slackline) and select the workspace.
  3. Under Display Information, customize the appearance of the bot user.
- 4. Under Features in the sidebar, click OAuth & Permissions.
- 5. Grant all of the following permissions:
-    channels:history, channels:read, chat:write, chat:write.customize, groups:history, groups:read,
-    reactions:read, team:read, users:read
- 6. Under Settings in the sidebar, click Install App.
- 7. Click the Install App button and accept the confirmation screen.
- 8. Once back at Installed App settings, copy the Bot User OAuth Access Token to your clipboard.
+ 4. Under Features in the sidebar, click Event Subscriptions.
+ 5. Toggle the Enable Events slider to On.
+ 6. Enter the URL of your server under Request URL.
+ 7. Expand Subscribe to bot events and add all of the following:
+    message.channels, message.groups, member_joined_channel, reaction_added
+ 8. Click the Save Changes button at the bottom.
+ 9. Under Features in the sidebar, click Slash Commands, then hit Create New Command.
+10. Set Command to whatever you prefer (e.g., slackline).
+11. Reenter your same server URL in Request URL.
+12. Set Short Description to whatever you like and hit Save.
+13. Repeat for each desired command abbreviation/alias.
+14. Under Features in the sidebar, click OAuth & Permissions.
+15. Leave channels:read and groups:read selected and grant all of the following further permissions:
+    chat:write.customize (and chat:write), team:read, users:read
+16. Under Features in the sidebar, click App Home.
+17. Further customize the appearance of the bot user, e.g.:
+    Display Name (Bot Name), Always Show My Bot as Online, Messages Tab
+18. Under Settings in the sidebar, click Install App.
+19. Click the Install to Workspace button and hit Allow on the confirmation screen.
+20. Once back at Installed App settings, copy the Bot User OAuth Access Token to your clipboard.
 
-Now set up the environment under which you will run the server:
- 1. Set up a PostgresSQL database server and export the following environment variable:
-    $ export DATABASE_URL=postgres://<path>
- 2. For each (zero-indexed) workspace you want to connect to, export an environment variable:
+Configure the server by updating its environment as follows:
+ 1. For each (zero-indexed) workspace you want to connect to, export an environment variable:
     $ export TOKEN_<index>=<subdomain>#<secret>
- 3. For each (uni-directional) channel broadcast bridge, export an environment variable:
+ 2. For each (uni-directional) channel broadcast bridge, export an environment variable:
     $ export LINE_<workspace>_<channel>=<workspace>#<channel>
- 4. For the best tested configuration, configure the opposite direction of each bridge as well.
- 5. Start the server by executing: $ npm start
- 6. Take note of the fully-qualified URL and port at which you are running the server.
-
-Return to the Slack API console and do the following for each of the apps you created earlier:
- 1. Under Features in the sidebar, click Event Subscriptions.
- 2. Toggle the Enable Events slider to On.
- 3. Enter the URL of your server under Request URL.
- 4. Expand Subscribe to bot events and add all of the following:
-    message.channels, member_joined_channel, message.groups, reaction_added
- 5. Click the Save Changes button at the bottom.
+ 3. For the best tested configuration, configure the opposite direction of each bridge as well.
+ 4. Restart the server.
 
 For each workspace, give the bot user access to each channel you configured above:
  1. Navigate to https://<subdomain>.slack.com and one of the channels in question.
