@@ -334,6 +334,10 @@ async function handle_command(payload) {
 			channel = args;
 
 		var paired = await cache.line(payload.team_domain, channel);
+		if(!paired) {
+			channel = channel.replace(/group$/, '');
+			paired = await cache.line(payload.team_domain, channel);
+		}
 		if(!paired)
 			return '*Error:* Unpaired channel: \'' + channel + '\'';
 		return 'Members bridged with channel \'' + channel + '\':\n'
