@@ -250,16 +250,12 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 	});
 
 	var mismatches = [];
-	var matches;
 	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
-		uid = await cache.uid(user, out_workspace);
+		var uid = await cache.uid(user, out_workspace);
 		if(!Array.isArray(uid))
 			return '<@' + uid + '>';
-		else {
-			mismatches.push(user);
-			if(!matches)
-				matches = uid;
-		}
+
+		mismatches.push(user);
 		return orig;
 	});
 
@@ -271,10 +267,15 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 			'*Warning:* Could not find anyone by the name(s) \''
 			+ mismatches.join('\', \'') + '\'!'
 			+ '\nMaybe you meant one of these people:'
-			+ '\n* `@' + matches.join('`\n* `@') + '`\n'
+			+ '\n' + await list_users(out_workspace) + '\n'
 			+ '_If so, edit your message so they will be notified!_');
 
 	return message;
+}
+
+async function list_users(workspace) {
+	var users = await cache.uid('', workspace);
+	return '`@' + users.join('`\n`@') + '`';
 }
 
 function warning(workspace, channel, user, text) {
