@@ -283,14 +283,23 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 	});
 
 	var mismatches = [];
-	message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
-		var uid = await cache.uid(user, out_channel, out_workspace);
-		if(!Array.isArray(uid))
-			return '<@' + uid + '>';
+	if(typeof out_channel == 'string')
+		message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
+			var uid = await cache.uid(user, out_channel, out_workspace);
+			if(!Array.isArray(uid))
+				return '<@' + uid + '>';
 
-		mismatches.push(user);
-		return orig;
-	});
+			mismatches.push(user);
+			return orig;
+		});
+	else
+		message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
+			var uid = out_channel[user];
+			if(uid)
+				return '<@' + uid + '>';
+
+			return orig;
+		});
 
 	mismatches = mismatches.filter(function(each) {
 		return !locals[each];
@@ -561,14 +570,24 @@ async function handle_event(event) {
 
 	var user = await cache.user(event.user, channel, workspace);
 	if(user) {
+		var users = paired.channel;
 		message.icon_url = user.avatar;
 		message.username = user.name;
-		if(event.channel_type == 'im')
+		if(event.channel_type == 'im') {
 			message.username += ' - ' + cache.line(workspace, channel).channel;
 
+			var uid = await call('conversations.info?channel='
+				+ paired.channel, null, paired.workspace);
+			uid = uid.channel.user;
+
+			var name = await cache.user(uid, cache.line(workspace, channel), paired.workspace);
+			name = name.name;
+			users = {};
+			users[name] = uid;
+		}
+
 		message.text = await process_users(workspace, channel, event.user,
-			message.text, paired.workspace, cache.line(workspace, channel).channel,
-			event.channel);
+			message.text, paired.workspace, users, event.channel);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
