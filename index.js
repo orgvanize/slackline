@@ -430,8 +430,10 @@ async function handle_command(payload) {
 
 		var paired = await cache.line(payload.team_domain, channel);
 		if(!paired) {
-			if(command == 'dm')
+			if(command == 'dm') {
 				cache.dm(payload.user_id).uid = undefined;
+				await clean_channel(payload.team_domain, payload.user_id);
+			}
 			return '*Error:* The channel \'' + channel + '\' is not bridged!';
 		}
 
@@ -441,6 +443,7 @@ async function handle_command(payload) {
 
 		if(!args) {
 			cache.dm(payload.user_id).uid = undefined;
+			await clean_channel(payload.team_domain, payload.user_id);
 			return '*Error:* You must specify a user to direct message!\n'
 				+ '_See_ *' + payload.command + ' help* (on the *dm* command).';
 		}
@@ -448,6 +451,7 @@ async function handle_command(payload) {
 		var uid = await cache.uid(args, paired.channel, paired.workspace);
 		if(Array.isArray(uid)) {
 			cache.dm(payload.user_id).uid = undefined;
+			await clean_channel(payload.team_domain, payload.user_id);
 			return '*Error:* Could not find anyone by the name \''
 				+ args + '\'!'
 				+ '\nMaybe you meant one of these people:\n'
