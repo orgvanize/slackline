@@ -384,7 +384,7 @@ async function handle_command(payload) {
 		dm.in_channel = channel;
 		dm.uid = uid;
 		await warning(payload.team_domain, payload.user_id, payload.user_id,
-			'You are now DM\'ing `@' + args + '`.\n'
+			'You are now DM\'ing `@' + args + '` from #' + channel + '.\n'
 			+ '_To change this, use_ *' + payload.command + ' dm* _at any time._');
 		return '';
 
