@@ -397,8 +397,11 @@ async function handle_command(payload) {
 				+ '_See_ *' + payload.command + ' help*.';
 
 		var paired = await cache.line(payload.team_domain, channel);
-		if(!paired)
+		if(!paired) {
+			if(command == 'dm')
+				cache.dm(payload.user_id).uid = undefined;
 			return '*Error:* The channel \'' + channel + '\' is not bridged!';
+		}
 
 		if(command == 'list')
 			return 'Members bridged with channel \'' + channel + '\':\n'
