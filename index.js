@@ -94,6 +94,16 @@ const cache = {
 		return cached(this.workspaces, id, 'team.info', 'team', 'domain');
 	},
 
+	dms: {},
+	dm: function(uid) {
+		var dm = this.dms[uid];
+		if(!dm) {
+			dm = {};
+			this.dms[uid] = dm;
+		}
+		return dm;
+	},
+
 	bootstrap: async function(token) {
 		token = this.token(token);
 		if(!token)
@@ -341,19 +351,24 @@ async function handle_command(payload) {
 		args = argv[0];
 		if(argv.length > 1)
 			channel = argv[1];
+		else if(payload.channel_name == 'directmessage')
+			if(!(channel = cache.dm(payload.user_id).in_channel))
+				channel = '';
 
 		var paired = await cache.line(payload.team_domain, channel);
 		if(!paired) {
 			channel = channel.replace(/group$/, '');
 			paired = await cache.line(payload.team_domain, channel);
 		}
-		if(!paired)
+		if(!paired && channel)
 			return '*Error:* Unpaired channel: \'' + channel + '\'';
 		if(command == 'list')
 			return 'Members bridged with channel \'' + channel + '\':\n'
 				+ await list_users(paired.workspace, paired.channel);
-		if(!args)
+		else if(!args)
 			return '*Error:* You must specify a user to direct message! See `help`.';
+		else if(!channel)
+			return '*Error:* Please specify which channel the user is from! See `help`.';
 
 		var uid = await cache.uid(args, paired.channel, paired.workspace);
 		if(Array.isArray(uid))
@@ -361,6 +376,11 @@ async function handle_command(payload) {
 				+ args + '\'!'
 				+ '\nMaybe you meant one of these people:\n'
 				+ (await list_users(paired.workspace, paired.channel)).replace(/@/g, '');
+
+		var dm = cache.dm(payload.user_id);
+		dm.out_workspace = paired.workspace;
+		dm.in_channel = channel;
+		dm.uid = uid;
 		await warning(payload.team_domain, payload.user_id, payload.user_id,
 			'You are now DM\'ing `@' + args + '`.\n'
 			+ '_To change this, use_ *' + payload.command + 'dm* _at any time._');
