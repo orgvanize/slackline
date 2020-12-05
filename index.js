@@ -95,6 +95,7 @@ const cache = {
 	},
 
 	dms: {},
+	ims: {},
 	dm: function(uid) {
 		var dm = this.dms[uid];
 		if(!dm) {
@@ -102,6 +103,24 @@ const cache = {
 			this.dms[uid] = dm;
 		}
 		return dm;
+	},
+	im: async function(uid, workspace) {
+		var im = this.ims[workspace]
+		if(im)
+			im = im[uid];
+		if(!im) {
+			var channels = await collect_call('conversations.list?types=im',
+				null, 'channels', workspace);
+			if(!channels)
+				console.log('Missing OAuth scope im:read?');
+
+			var ims = {}
+			for(var channel of channels)
+				ims[channel.user] = channel.id;
+			this.ims[workspace] = ims;
+			im = ims[uid];
+		}
+		return im;
 	},
 
 	bootstrap: async function(token) {
@@ -383,7 +402,7 @@ async function handle_command(payload) {
 		dm.out_workspace = paired.workspace;
 		dm.in_channel = channel;
 		dm.uid = uid;
-		await warning(payload.team_domain, payload.user_id, payload.user_id,
+		warning(payload.team_domain, payload.user_id, payload.user_id,
 			'You are now DM\'ing `@' + args + '` from #' + channel + '.\n'
 			+ '_To change this, use_ *' + payload.command + ' dm* _at any time._');
 		return '';
@@ -404,10 +423,12 @@ async function handle_event(event) {
 		handle_join(event);
 		return;
 	} else if(event.type == 'reaction_added') {
-		var workspace = await cache.workspace(cache.team(event.item.channel));
-		warning(workspace, event.item.channel, event.user,
-			'*Warning:* Emoji reactions are currently unsupported.'
-			+ '\n_If you want the other channel to see, send an emoji message!_');
+		if(await messages(event.item.ts)) {
+			var workspace = await cache.workspace(cache.team(event.item.channel));
+			warning(workspace, event.item.channel, event.user,
+				'*Warning:* Emoji reactions are currently unsupported.'
+				+ '\n_If you want the other channel to see, send an emoji message!_');
+		}
 		return;
 	} else if(event.subtype == 'file_share') {
 		var workspace = await cache.workspace(cache.team(event.channel));
@@ -454,8 +475,31 @@ async function handle_event(event) {
 		team = cache.team(event.channel);
 
 	var workspace = await cache.workspace(team);
-	var channel = await cache.channel(event.channel, workspace);
-	var paired = cache.line(workspace, channel);
+	var channel;
+	var paired;
+	if(event.channel_type == 'im') {
+		var dm = cache.dm(event.user);
+		if(dm.uid) {
+			channel = dm.in_channel;
+			paired = {
+				workspace: dm.out_workspace,
+				channel: await cache.im(dm.uid, dm.out_workspace),
+			};
+		} else {
+			console.log(await call('reactions.add', {
+				channel: event.channel,
+				timestamp: event.ts,
+				name: 'warning',
+			}, workspace));
+			warning(workspace, event.channel, event.user,
+				'*Error:* You must specify a user to direct message!\n'
+				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
+			return;
+		}
+	} else {
+		channel = await cache.channel(event.channel, workspace);
+		paired = cache.line(workspace, channel);
+	}
 	if(!workspace || !channel || !paired)
 		return;
 
