@@ -330,13 +330,34 @@ async function select_user(dmer, in_workspace, in_channel, out_workspace, dmee, 
 	if(command)
 		dm.command = command;
 
-	var tip = '';
-	if(dm.command)
-		tip = '\n_To change this, use_ *' + dm.command + ' dm* _at any time._';
-
+	var cleaned = await clean_channel(in_workspace, dmer)
 	var user = await cache.user(dmee, cache.line(in_workspace, in_channel), out_workspace);
-	warning(in_workspace, dmer, dmer,
-		'You are now DM\'ing `@' + user.name + '` from #' + in_channel + '.' + tip);
+	await call('chat.postMessage', {
+		channel: dmer,
+		text: 'You are now DM\'ing `@' + user.name + '` from #' + in_channel + '.',
+	}, in_workspace);
+
+	if(!cleaned && dm.command)
+		warning(in_workspace, dmer, dmer,
+			'_To change this, use_ *' + dm.command + ' dm* _at any time._');
+}
+
+async function clean_channel(workspace, user) {
+	var modified = false;
+	var convo = await cache.im(user, workspace);
+	var latest;
+	console.log((await call('conversations.history?channel='
+		+ convo + '&limit=1', null, workspace)).messages[0]);
+	while((latest = (await call('conversations.history?channel='
+		+ convo + '&limit=1', null, workspace)).messages)
+		&& (latest = latest[0]) && latest.bot_id && !latest.username) {
+		await call('chat.delete', {
+			channel: user,
+			ts: latest.ts,
+		}, workspace);
+		modified = true;
+	}
+	return modified;
 }
 
 function warning(workspace, channel, user, text) {
