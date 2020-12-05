@@ -358,40 +358,44 @@ async function handle_connection(request, response) {
 async function handle_command(payload) {
 	var command = payload.text.replace(/\s.*/, '');
 	var args = payload.text.replace(/\S+\s*/, '');
+	var channel = '';
 	var error = '';
 	switch(command) {
 	case 'dm':
-	case 'list':
-		var channel = payload.channel_name;
-		if(args && command == 'list')
-			channel = args;
-
 		var argv = args.split(' - ');
 		args = argv[0];
 		if(argv.length > 1)
 			channel = argv[1];
-		else if(payload.channel_name == 'directmessage')
-			if(!(channel = cache.dm(payload.user_id).in_channel))
+	case 'list':
+		if(!channel) {
+			if(command == 'list' && args)
+				channel = args;
+			else if(payload.channel_name != 'directmessage')
+				channel = payload.channel_name;
+			else if(!(channel = cache.dm(payload.user_id).in_channel))
 				channel = '';
+		}
 
 		var paired = await cache.line(payload.team_domain, channel);
 		if(!paired) {
 			channel = channel.replace(/group$/, '');
 			paired = await cache.line(payload.team_domain, channel);
 		}
-		if(!paired && channel)
-			return '*Error:* Unpaired channel: \'' + channel + '\'';
+
+		if(!channel)
+			return '*Error:* You must specify a bridged channel (could not infer it)!\n'
+				+ '_See_ *' + payload.command + ' help*.';
+		else if(!paired)
+			return '*Error:* The channel \'' + channel + '\' is not bridged!';
+
 		if(command == 'list')
 			return 'Members bridged with channel \'' + channel + '\':\n'
 				+ await list_users(paired.workspace, paired.channel);
-		else if(!args) {
+
+		if(!args) {
 			cache.dm(payload.user_id).uid = undefined;
 			return '*Error:* You must specify a user to direct message!\n'
-				+ '_See_ *' + payload.command + ' help*.';
-		} else if(!channel) {
-			cache.dm(payload.user_id).uid = undefined;
-			return '*Error:* Please specify which channel the user is from!\n'
-				+ '_See_ *' + payload.command + ' help*.';
+				+ '_See_ *' + payload.command + ' help* (on the *dm* command).';
 		}
 
 		var uid = await cache.uid(args, paired.channel, paired.workspace);
