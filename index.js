@@ -371,21 +371,16 @@ async function handle_command(payload) {
 			if(command == 'list' && args)
 				channel = args;
 			else if(payload.channel_name != 'directmessage')
-				channel = payload.channel_name;
+				channel = await cache.channel(payload.channel_id, payload.team_domain);
 			else if(!(channel = cache.dm(payload.user_id).in_channel))
 				channel = '';
 		}
-
-		var paired = await cache.line(payload.team_domain, channel);
-		if(!paired) {
-			channel = channel.replace(/group$/, '');
-			paired = await cache.line(payload.team_domain, channel);
-		}
-
 		if(!channel)
 			return '*Error:* You must specify a bridged channel (could not infer it)!\n'
 				+ '_See_ *' + payload.command + ' help*.';
-		else if(!paired)
+
+		var paired = await cache.line(payload.team_domain, channel);
+		if(!paired)
 			return '*Error:* The channel \'' + channel + '\' is not bridged!';
 
 		if(command == 'list')
