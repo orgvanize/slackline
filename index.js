@@ -366,9 +366,11 @@ async function handle_command(payload) {
 			return 'Members bridged with channel \'' + channel + '\':\n'
 				+ await list_users(paired.workspace, paired.channel);
 		else if(!args)
-			return '*Error:* You must specify a user to direct message! See `help`.';
+			return '*Error:* You must specify a user to direct message!\n'
+				+ '_See_ *' + payload.command + ' help*.';
 		else if(!channel)
-			return '*Error:* Please specify which channel the user is from! See `help`.';
+			return '*Error:* Please specify which channel the user is from!\n'
+				+ '_See_ *' + payload.command + ' help*.';
 
 		var uid = await cache.uid(args, paired.channel, paired.workspace);
 		if(Array.isArray(uid))
@@ -383,16 +385,16 @@ async function handle_command(payload) {
 		dm.uid = uid;
 		await warning(payload.team_domain, payload.user_id, payload.user_id,
 			'You are now DM\'ing `@' + args + '`.\n'
-			+ '_To change this, use_ *' + payload.command + 'dm* _at any time._');
+			+ '_To change this, use_ *' + payload.command + ' dm* _at any time._');
 		return '';
 
 	default:
 		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
 	case 'help':
-		error += 'Supported commands:\n'
-			+ '`help`: Show this help\n'
-			+ '`list [channel]`: List bridged members of current channel (or specified [channel])\n'
-			+ '`dm <user> - [channel]`: Direct message specified <user> (bridged via [channel])';
+		error += 'Supported commands:\n*'
+			+ payload.command + ' help*: Show this help\n*'
+			+ payload.command + ' list [channel]*: List bridged members of current channel (or specified [channel])\n*'
+			+ payload.command + ' dm <user> [- channel]*: Direct message specified <user> (bridged via [channel])';
 		return error;
 	}
 }
