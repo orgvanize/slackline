@@ -481,8 +481,9 @@ async function handle_event(event) {
 	var workspace = await cache.workspace(team);
 	var channel;
 	var paired;
+	var dm;
 	if(event.channel_type == 'im') {
-		var dm = cache.dm(event.user);
+		dm = cache.dm(event.user);
 		if(dm.uid) {
 			channel = dm.in_channel;
 			paired = {
@@ -511,13 +512,12 @@ async function handle_event(event) {
 		channel: paired.channel,
 		text: event.text,
 	};
-	if(event.attachments)
-		message.attachments = event.attachments;
+	var thread;
 	if(event.thread_ts) {
-		var copy = await messages(event.thread_ts);
-		console.log(copy);
-		if(copy) {
-			message.thread_ts = copy.out_ts;
+		thread = await messages(event.thread_ts);
+		console.log(thread);
+		if(thread) {
+			message.thread_ts = thread.out_ts;
 			if(event.subtype == 'thread_broadcast')
 				message.reply_broadcast = true;
 		}
@@ -526,12 +526,22 @@ async function handle_event(event) {
 	var user = await cache.user(event.user, channel, workspace);
 	if(user) {
 		message.username = user.name;
-		if(event.channel_type = 'im')
-			message.username += ' - ' + cache.line(workspace, dm.in_channel).channel;
 		message.icon_url = user.avatar;
 
 		message.text = await process_users(workspace, channel, event.user,
 			message.text, paired.workspace, paired.channel);
+	}
+	if(event.channel_type = 'im') {
+		if(message.username)
+			message.username += ' - ' + cache.line(workspace, dm.in_channel).channel;
+		if(message.thread_ts &&
+			(thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
+			console.log('before: ' + paired.workspace + '#' + paired.channel);
+			paired.workspace = thread.out_workspace;
+			paired.channel = thread.out_conversation;
+			message.channel = thread.out_conversation;
+			console.log('after: ' + paired.workspace + '#' + paired.channel);
+		}
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
