@@ -556,7 +556,7 @@ async function handle_event(event) {
 				name: 'warning',
 			}, workspace));
 			warning(workspace, event.channel, event.user,
-				'*Error:* You must specify a user to direct message!\n'
+				'*Error:* You must either reply in a thread or specify a user to direct message!\n'
 				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
 			return;
 		}
