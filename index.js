@@ -526,6 +526,8 @@ async function handle_event(event) {
 	var user = await cache.user(event.user, channel, workspace);
 	if(user) {
 		message.username = user.name;
+		if(event.channel_type = 'im')
+			message.username += ' - ' + cache.line(workspace, dm.in_channel).channel;
 		message.icon_url = user.avatar;
 
 		message.text = await process_users(workspace, channel, event.user,
