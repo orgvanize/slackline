@@ -264,9 +264,9 @@ async function replace(string, regex, async_func) {
 	});
 }
 
-async function process_users(in_workspace, in_channel, in_user, message, out_workspace, out_channel) {
+async function process_users(in_workspace, in_channel, in_user, message, out_workspace, out_channel, display) {
 	if(message.startsWith('@') || message.search(/[^<`]@/) != -1)
-		await warning(in_workspace, in_channel, in_user,
+		warning(in_workspace, display, in_user,
 			'*Warning:* If you want to tag someone in the bridged channel,'
 			+ ' you must enclose the mention in backticks (e.g., `@Their Name`).'
 			+ '\n_Edit your message if you wish to notify people!_');
@@ -296,7 +296,7 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 		return !locals[each];
 	});
 	if(mismatches.length)
-		await warning(in_workspace, in_channel, in_user,
+		warning(in_workspace, display, in_user,
 			'*Warning:* Could not find anyone by the name(s) \''
 			+ mismatches.join('\', \'') + '\'!'
 			+ '\nMaybe you meant one of these people:'
@@ -492,38 +492,7 @@ async function handle_event(event) {
 		|| event.subtype == 'file_share'))
 		team = cache.team(event.channel);
 
-	var workspace = await cache.workspace(team);
-	var channel;
-	var paired;
-	var dm;
-	if(event.channel_type == 'im') {
-		dm = cache.dm(event.user);
-		if(dm.uid) {
-			channel = dm.in_channel;
-			paired = {
-				workspace: dm.out_workspace,
-				channel: await cache.im(dm.uid, dm.out_workspace),
-			};
-		} else {
-			console.log(await call('reactions.add', {
-				channel: event.channel,
-				timestamp: event.ts,
-				name: 'warning',
-			}, workspace));
-			warning(workspace, event.channel, event.user,
-				'*Error:* You must specify a user to direct message!\n'
-				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
-			return;
-		}
-	} else {
-		channel = await cache.channel(event.channel, workspace);
-		paired = cache.line(workspace, channel);
-	}
-	if(!workspace || !channel || !paired)
-		return;
-
 	var message = {
-		channel: paired.channel,
 		text: event.text,
 	};
 	var thread;
@@ -537,32 +506,69 @@ async function handle_event(event) {
 		}
 	}
 
-	var user = await cache.user(event.user, channel, workspace);
-	if(user) {
-		message.username = user.name;
-		message.icon_url = user.avatar;
+	var workspace = await cache.workspace(team);
+	if(!workspace)
+		return;
 
-		message.text = await process_users(workspace, channel, event.user,
-			message.text, paired.workspace, paired.channel);
-	}
+	var channel;
+	var paired;
 	if(event.channel_type == 'im') {
-		if(message.username)
-			message.username += ' - ' + cache.line(workspace, dm.in_channel).channel;
-		if(message.thread_ts &&
-			(thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
-			paired.workspace = thread.out_workspace;
-			paired.channel = thread.out_conversation;
-			message.channel = thread.out_conversation;
+		var dm = cache.dm(event.user);
+		if(dm.uid) {
+			channel = dm.in_channel;
+			paired = {
+				workspace: dm.out_workspace,
+				channel: await cache.im(dm.uid, dm.out_workspace),
+			};
+		}
 
-			var meta = await call('conversations.info?channel='
-				+ paired.channel, null, paired.workspace);
-			channel = cache.line(paired.workspace, thread.out_channel);
+		if(message.thread_ts && (!paired
+			|| thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
+			channel = cache.line(thread.out_workspace , thread.out_channel, true);
 			if(channel)
 				channel = channel.channel;
 			else
 				channel = thread.in_channel;
+
+			paired = {
+				workspace: thread.out_workspace,
+				channel: thread.out_conversation,
+			};
+
+			var meta = await call('conversations.info?channel='
+				+ paired.channel, null, paired.workspace);
 			select_user(event.user, workspace, channel, paired.workspace, meta.channel.user);
 		}
+
+		if(!channel || !paired) {
+			console.log(await call('reactions.add', {
+				channel: event.channel,
+				timestamp: event.ts,
+				name: 'warning',
+			}, workspace));
+			warning(workspace, event.channel, event.user,
+				'*Error:* You must specify a user to direct message!\n'
+				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
+			return;
+		}
+	} else {
+		channel = await cache.channel(event.channel, workspace);
+		paired = cache.line(workspace, channel);
+		if(!channel || !paired)
+			return;
+	}
+	message.channel = paired.channel;
+
+	var user = await cache.user(event.user, channel, workspace);
+	if(user) {
+		message.icon_url = user.avatar;
+		message.username = user.name;
+		if(event.channel_type == 'im')
+			message.username += ' - ' + cache.line(workspace, channel).channel;
+
+		message.text = await process_users(workspace, channel, event.user,
+			message.text, paired.workspace, cache.line(workspace, channel).channel,
+			event.channel);
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
