@@ -384,19 +384,24 @@ async function handle_command(payload) {
 		if(command == 'list')
 			return 'Members bridged with channel \'' + channel + '\':\n'
 				+ await list_users(paired.workspace, paired.channel);
-		else if(!args)
+		else if(!args) {
+			cache.dm(payload.user_id).uid = undefined;
 			return '*Error:* You must specify a user to direct message!\n'
 				+ '_See_ *' + payload.command + ' help*.';
-		else if(!channel)
+		} else if(!channel) {
+			cache.dm(payload.user_id).uid = undefined;
 			return '*Error:* Please specify which channel the user is from!\n'
 				+ '_See_ *' + payload.command + ' help*.';
+		}
 
 		var uid = await cache.uid(args, paired.channel, paired.workspace);
-		if(Array.isArray(uid))
+		if(Array.isArray(uid)) {
+			cache.dm(payload.user_id).uid = undefined;
 			return '*Error:* Could not find anyone by the name \''
 				+ args + '\'!'
 				+ '\nMaybe you meant one of these people:\n'
 				+ (await list_users(paired.workspace, paired.channel)).replace(/@/g, '');
+		}
 
 		var dm = cache.dm(payload.user_id);
 		dm.out_workspace = paired.workspace;
