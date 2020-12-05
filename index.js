@@ -311,6 +311,23 @@ async function list_users(workspace, channel) {
 	return '`@' + users.join('`\n`@') + '`';
 }
 
+async function select_user(dmer, in_workspace, in_channel, out_workspace, dmee, command) {
+	var dm = cache.dm(dmer);
+	dm.out_workspace = out_workspace;
+	dm.in_channel = in_channel;
+	dm.uid = dmee;
+	if(command)
+		dm.command = command;
+
+	var tip = '';
+	if(dm.command)
+		tip = '\n_To change this, use_ *' + dm.command + ' dm* _at any time._';
+
+	var user = await cache.user(dmee, cache.line(in_workspace, in_channel), out_workspace);
+	warning(in_workspace, dmer, dmer,
+		'You are now DM\'ing `@' + user.name + '` from #' + in_channel + '.' + tip);
+}
+
 function warning(workspace, channel, user, text) {
 	return call('chat.postEphemeral', {
 		channel: channel,
@@ -402,13 +419,7 @@ async function handle_command(payload) {
 				+ (await list_users(paired.workspace, paired.channel)).replace(/@/g, '');
 		}
 
-		var dm = cache.dm(payload.user_id);
-		dm.out_workspace = paired.workspace;
-		dm.in_channel = channel;
-		dm.uid = uid;
-		warning(payload.team_domain, payload.user_id, payload.user_id,
-			'You are now DM\'ing `@' + args + '` from #' + channel + '.\n'
-			+ '_To change this, use_ *' + payload.command + ' dm* _at any time._');
+		select_user(payload.user_id, payload.team_domain, channel, paired.workspace, uid, payload.command);
 		return '';
 
 	default:
@@ -531,16 +542,23 @@ async function handle_event(event) {
 		message.text = await process_users(workspace, channel, event.user,
 			message.text, paired.workspace, paired.channel);
 	}
-	if(event.channel_type = 'im') {
+	if(event.channel_type == 'im') {
 		if(message.username)
 			message.username += ' - ' + cache.line(workspace, dm.in_channel).channel;
 		if(message.thread_ts &&
 			(thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
-			console.log('before: ' + paired.workspace + '#' + paired.channel);
 			paired.workspace = thread.out_workspace;
 			paired.channel = thread.out_conversation;
 			message.channel = thread.out_conversation;
-			console.log('after: ' + paired.workspace + '#' + paired.channel);
+
+			var meta = await call('conversations.info?channel='
+				+ paired.channel, null, paired.workspace);
+			channel = cache.line(paired.workspace, thread.out_channel);
+			if(channel)
+				channel = channel.channel;
+			else
+				channel = thread.in_channel;
+			select_user(event.user, workspace, channel, paired.workspace, meta.channel.user);
 		}
 	}
 
