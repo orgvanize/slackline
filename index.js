@@ -133,18 +133,20 @@ const cache = {
 			return workspace;
 		this.workspaces[workspace.team.id] = workspace.team.domain;
 
-		var channels = await collect_call('conversations.list?types=public_channel,private_channel',
+		var channels = await collect_call('conversations.list?types=public_channel,private_channel,im',
 			null, 'channels', token);
 		if(!channels)
 			console.log('Missing OAuth scope channels:read and/or groups:read?');
 		for(var channel of channels)
-			if(this.line(workspace.team.domain, channel.name, true)) {
+			if(channel.is_im || this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
 
-				var members = await collect_call('conversations.members?channel=' + channel.id,
-					null, 'members', token);
-				for(var member of members)
-					await this.user(member, channel.name, workspace.team.domain);
+				if(!channel.is_im) {
+					var members = await collect_call('conversations.members?channel=' + channel.id,
+						null, 'members', token);
+					for(var member of members)
+						await this.user(member, channel.name, workspace.team.domain);
+				}
 			}
 
 		return true;
