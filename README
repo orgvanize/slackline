@@ -26,7 +26,7 @@ For each workspace you want to bridge, do the following:
 13. Repeat for each desired command abbreviation/alias.
 14. Under Features in the sidebar, click OAuth & Permissions.
 15. Leave channels:read and groups:read selected and grant all of the following further permissions:
-    chat:write.customize (and chat:write), im:read, team:read, users:read
+    chat:write.customize (and chat:write), im:read, team:read, users:read, reactions:write
 16. Under Features in the sidebar, click App Home.
 17. Make sure Messages Tab is enabled, then further customize the bot's appearance, e.g.:
     Display Name (Bot Name), Always Show My Bot as Online
