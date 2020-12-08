@@ -346,8 +346,7 @@ async function clean_channel(workspace, user) {
 	var modified = false;
 	var convo = await cache.im(user, workspace);
 	var latest;
-	console.log((await call('conversations.history?channel='
-		+ convo + '&limit=1', null, workspace)).messages[0]);
+	await call('conversations.history?channel=' + convo + '&limit=1', null, workspace);
 	while((latest = (await call('conversations.history?channel='
 		+ convo + '&limit=1', null, workspace)).messages)
 		&& (latest = latest[0]) && latest.bot_id && !latest.username) {
