@@ -319,6 +319,37 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 	return message;
 }
 
+async function process_args(in_workspace, in_channel, args) {
+	args = await replace(args, /<#([^|>]*)(|[^>]*)?>/, async function(orig, cid, cname) {
+		var channel = await cache.channel(cid, in_workspace);
+		if(channel) {
+			in_channel = channel;
+			return channel;
+		}
+
+		return cname.substring(1);
+	});
+	args = args.replace(/#(\S*)/, function(orig, cname) {
+		in_channel = cname;
+		return cname;
+	});
+	if(!in_channel)
+		return args;
+
+	args = await replace(args, /<@([^|>]*)(|[^>]*)?>/g, async function(orig, uid, uname) {
+		var user = await cache.user(uid, in_channel, in_workspace, false);
+		if(user)
+			return user.name;
+
+		return uname.substring(1);
+	});
+	args = args.replace(/`?@([^\`]*)`?/g, function(orig, uname) {
+		return uname;
+	});
+
+	return args;
+}
+
 async function list_users(workspace, channel) {
 	var users = await cache.uid('', channel, workspace);
 	return '`@' + users.join('`\n`@') + '`';
@@ -407,8 +438,14 @@ async function handle_connection(request, response) {
 
 async function handle_command(payload) {
 	var command = payload.text.replace(/\s.*/, '');
-	var args = payload.text.replace(/\S+\s*/, '');
-	var channel = '';
+	var channel;
+	if(payload.channel_name == 'directmessage') {
+		if(!(channel = cache.dm(payload.user_id).in_channel))
+			channel = '';
+	} else
+		channel = await cache.channel(payload.channel_id, payload.team_domain);
+
+	var args = await process_args(payload.team_domain, channel, payload.text.replace(/\S+\s*/, ''));
 	var error = '';
 	switch(command) {
 	case 'dm':
@@ -417,14 +454,8 @@ async function handle_command(payload) {
 		if(argv.length > 1)
 			channel = argv[1];
 	case 'list':
-		if(!channel) {
-			if(command == 'list' && args)
-				channel = args;
-			else if(payload.channel_name != 'directmessage')
-				channel = await cache.channel(payload.channel_id, payload.team_domain);
-			else if(!(channel = cache.dm(payload.user_id).in_channel))
-				channel = '';
-		}
+		if(command == 'list' && args)
+			channel = args;
 		if(!channel)
 			return '*Error:* You must specify a bridged channel (could not infer it)!\n'
 				+ '_See_ *' + payload.command + ' help*.';
