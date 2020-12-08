@@ -464,10 +464,13 @@ async function handle_command(payload) {
 	default:
 		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
 	case 'help':
-		error += 'Supported commands:\n>'
-			+ payload.command + ' help\n\tShow this help\n>'
-			+ payload.command + ' list [channel]\n\tList bridged members of current channel (or specified [channel])\n>'
-			+ payload.command + ' dm <user> [- channel]\n\tDirect message specified <user> (bridged via [channel])';
+		error += 'Supported commands:'
+			+ '\n>' + payload.command + ' help\n\tShow this help'
+			+ '\n>' + payload.command + ' list [channel]\n\tList bridged members of current channel (or specified [channel])'
+			+ '\n>' + payload.command + ' dm <user> [- channel]\n\tDirect message specified <user> (bridged via [channel])'
+			+ '\n\n_Note: In the above commands, <word> and [word] are not part of the command;'
+			+ ' rather, each <word> is a required argument that you must replace,'
+			+ ' and each [word] is an optional argument that you may either omit or replace._';
 		return error;
 	}
 }
