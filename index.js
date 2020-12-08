@@ -171,6 +171,8 @@ for(var index = 0; process.env['TOKEN_' + index]; ++index)
 		process.exit(2);
 	}
 
+const LOGGING = process.env.LOGGING != undefined;
+
 http.createServer(handle_connection).listen(PORT);
 
 async function cached(memo, key, method, parameter, argument, workspace, update = true) {
@@ -496,16 +498,19 @@ async function handle_event(event) {
 		return;
 	} else if(event.bot_id || (event.message && event.message.bot_id))
 		return;
-	console.log(event);
+	if(LOGGING)
+		console.log(event);
 
 	var team = event.team;
 	if(event.subtype == 'message_deleted') {
 		var copy = await messages(event.deleted_ts);
 		if(copy) {
-			console.log(await call('chat.delete', {
+			var ack = await call('chat.delete', {
 				channel: copy.out_conversation,
 				ts: copy.out_ts,
-			}, copy.out_workspace));
+			}, copy.out_workspace);
+			if(LOGGING)
+				console.log(ack);
 			await messages(event.deleted_ts, null);
 			await messages(copy.out_ts, null);
 		}
@@ -522,7 +527,10 @@ async function handle_event(event) {
 				await cache.user(event.message.user, copy.in_channel, copy.in_workspace);
 			message.text = await process_users(copy.in_workspace, copy.in_channel, event.message.user,
 				message.text, copy.out_workspace, copy.out_channel);
-			console.log(await call('chat.update', message, copy.out_workspace));
+			
+			var ack = await call('chat.update', message, copy.out_workspace);
+			if(LOGGING)
+				console.log(ack);
 		}
 		return;
 	} else if(event.subtype && (event.subtype == 'thread_broadcast'
@@ -620,7 +628,8 @@ async function handle_event(event) {
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
-	console.log(ack);
+	if(LOGGING)
+		console.log(ack);
 	await messages(event.ts, {
 		in_workspace: workspace,
 		in_channel: channel,
