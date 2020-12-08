@@ -20,9 +20,9 @@ For each workspace you want to bridge, do the following:
     message.channels, message.groups, message.im, member_joined_channel, reaction_added
  8. Click the Save Changes button at the bottom.
  9. Under Features in the sidebar, click Slash Commands, then hit Create New Command.
-10. Set Command to whatever you prefer (e.g., slackline).
+10. Set Command as you prefer (e.g., slackline) and Short Description to anything at all.
 11. Reenter your same server URL in Request URL.
-12. Set Short Description to whatever you like and hit Save.
+12. Check the box labeled Escape channels, users, and links sent to your app and hit Save.
 13. Repeat for each desired command abbreviation/alias.
 14. Under Features in the sidebar, click OAuth & Permissions.
 15. Leave channels:read and groups:read selected and grant all of the following further permissions:
