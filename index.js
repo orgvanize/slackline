@@ -487,7 +487,7 @@ async function handle_command(payload) {
 			return '*Error:* Could not find anyone by the name \''
 				+ args + '\'!'
 				+ '\nMaybe you meant one of these people:\n'
-				+ (await list_users(paired.workspace, paired.channel)).replace(/@/g, '');
+				+ await list_users(paired.workspace, paired.channel);
 		}
 
 		select_user(payload.user_id, payload.team_domain, channel, paired.workspace, uid, payload.command);
