@@ -485,7 +485,7 @@ async function handle_command(payload) {
 			cache.dm(payload.user_id).uid = undefined;
 			await clean_channel(payload.team_domain, payload.user_id);
 			return '*Error:* Could not find anyone by the name \''
-				+ args + '\'!'
+				+ args + '\' bridged with channel \'' + channel + '\'!'
 				+ '\nMaybe you meant one of these people:\n'
 				+ await list_users(paired.workspace, paired.channel);
 		}
