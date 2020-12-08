@@ -544,7 +544,6 @@ async function handle_event(event) {
 	var thread;
 	if(event.thread_ts) {
 		thread = await messages(event.thread_ts);
-		console.log(thread);
 		if(thread) {
 			message.thread_ts = thread.out_ts;
 			if(event.subtype == 'thread_broadcast')
@@ -587,11 +586,11 @@ async function handle_event(event) {
 		}
 
 		if(!channel || !paired) {
-			console.log(await call('reactions.add', {
+			await call('reactions.add', {
 				channel: event.channel,
 				timestamp: event.ts,
 				name: 'warning',
-			}, workspace));
+			}, workspace);
 			warning(workspace, event.channel, event.user,
 				'*Error:* You must either reply in a thread or specify a user to direct message!\n'
 				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
