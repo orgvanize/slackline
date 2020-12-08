@@ -428,7 +428,7 @@ async function handle_command(payload) {
 			return '*Error:* You must specify a bridged channel (could not infer it)!\n'
 				+ '_See_ *' + payload.command + ' help*.';
 
-		var paired = await cache.line(payload.team_domain, channel);
+		var paired = await cache.line(payload.team_domain, channel, true);
 		if(!paired) {
 			if(command == 'dm') {
 				cache.dm(payload.user_id).uid = undefined;
