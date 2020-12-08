@@ -494,7 +494,7 @@ async function handle_event(event) {
 			'*Warning:* File uploads are currently unsupported.'
 			+ '\n_If you want the other channel to see, link to cloud storage instead!_');
 	} else if(event.type != 'message') {
-		console.log('unhandled type in event: ' + JSON.stringify(event));
+		console.log('Unhandled type in event: ' + JSON.stringify(event));
 		return;
 	} else if(event.bot_id || (event.message && event.message.bot_id))
 		return;
