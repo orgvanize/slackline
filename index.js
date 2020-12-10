@@ -109,6 +109,13 @@ const cache = {
 		}
 		return dm;
 	},
+	dmers: function(uid) {
+		var dmers = [];
+		for(var dmer in this.dms)
+			if(this.dms[dmer].uid == uid)
+				dmers.push(dmer);
+		return dmers;
+	},
 	im: async function(uid, workspace) {
 		var im = this.ims[workspace]
 		if(im)
@@ -627,7 +634,15 @@ async function handle_event(event) {
 			else
 				channel = thread.in_channel;
 
-			if(await is_member(workspace, channel, event.user)) {
+			var remote;
+			if(!await is_member(workspace, channel, event.user))
+				error = '*Error:* You can no longer DM this person because you have'
+					+ ' been removed from the \'' + channel + '\' channel!';
+			else if((remote = cache.line(workspace, channel).channel)
+				&& !await is_member(thread.out_workspace, remote, event.user))
+				error = '*Error:* You can no longer DM this person because they have'
+					+ ' been unbridged from the \'' + channel + '\' channel!';
+			else {
 				paired = {
 					workspace: thread.out_workspace,
 					channel: thread.out_conversation,
@@ -636,9 +651,7 @@ async function handle_event(event) {
 				var meta = await call('conversations.info?channel='
 					+ paired.channel, null, paired.workspace);
 				select_user(event.user, workspace, channel, paired.workspace, meta.channel.user);
-			} else
-				error = '*Error:* You can no longer DM this person because you have'
-					+ ' been removed from the \'' + channel + '\' channel!';
+			}
 		}
 
 		if(!channel || !paired) {
@@ -718,8 +731,23 @@ async function handle_leave(event) {
 	var dm = cache.dm(event.user);
 	if(dm && dm.in_channel == channel) {
 		dm.uid = undefined;
+		await clean_channel(workspace, event.user);
 		warning(workspace, event.user, event.user,
 			'You can no longer DM this person because you have been removed from the'
 				+ ' \'' + channel + '\' channel.');
+	}
+
+	var paired;
+	var dmers = cache.dmers(event.user);
+	for(var dmer of dmers) {
+		if(!paired)
+			paired = cache.line(workspace, channel);
+
+		var dimmer = cache.dm(dmer);
+		dimmer.uid = undefined;
+		await clean_channel(paired.workspace, dmer);
+		warning(paired.workspace, dmer, dmer,
+			'You can no longer DM this person because they have been unbridged from the'
+				+ ' \'' + dimmer.in_channel + '\' channel.');
 	}
 }
