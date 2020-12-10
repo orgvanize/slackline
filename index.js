@@ -472,6 +472,14 @@ async function handle_command(payload) {
 				await clean_channel(payload.team_domain, payload.user_id);
 			}
 			return '*Error:* The channel \'' + channel + '\' is not bridged!';
+		} else if(Array.isArray(cache.uid(
+			(await cache.user(payload.user_id, channel, payload.team_domain, false)).name,
+			channel, payload.team_domain))) {
+			if(command == 'dm') {
+				cache.dm(payload.user_id).uid = undefined;
+				await clean_channel(payload.team_domain, payload.user_id);
+			}
+			return '*Error:* You are not a member of channel \'' + channel + '\'!';
 		}
 
 		if(command == 'list')
