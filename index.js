@@ -360,6 +360,12 @@ async function list_users(workspace, channel) {
 	return '`@' + users.join('`\n`@') + '`';
 }
 
+async function is_member(workspace, channel, uid) {
+	return !Array.isArray(cache.uid(
+		(await cache.user(uid, channel, workspace, false)).name,
+		channel, workspace));
+}
+
 async function select_user(dmer, in_workspace, in_channel, out_workspace, dmee, command) {
 	var dm = cache.dm(dmer);
 	dm.out_workspace = out_workspace;
@@ -472,9 +478,7 @@ async function handle_command(payload) {
 				await clean_channel(payload.team_domain, payload.user_id);
 			}
 			return '*Error:* The channel \'' + channel + '\' is not bridged!';
-		} else if(Array.isArray(cache.uid(
-			(await cache.user(payload.user_id, channel, payload.team_domain, false)).name,
-			channel, payload.team_domain))) {
+		} else if(!await is_member(payload.team_domain, channel, payload.user_id)) {
 			if(command == 'dm') {
 				cache.dm(payload.user_id).uid = undefined;
 				await clean_channel(payload.team_domain, payload.user_id);
@@ -614,6 +618,7 @@ async function handle_event(event) {
 			};
 		}
 
+		var error;
 		if(message.thread_ts && (!paired
 			|| thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
 			channel = cache.line(thread.out_workspace , thread.out_channel, true);
@@ -622,14 +627,18 @@ async function handle_event(event) {
 			else
 				channel = thread.in_channel;
 
-			paired = {
-				workspace: thread.out_workspace,
-				channel: thread.out_conversation,
-			};
+			if(await is_member(workspace, channel, event.user)) {
+				paired = {
+					workspace: thread.out_workspace,
+					channel: thread.out_conversation,
+				};
 
-			var meta = await call('conversations.info?channel='
-				+ paired.channel, null, paired.workspace);
-			select_user(event.user, workspace, channel, paired.workspace, meta.channel.user);
+				var meta = await call('conversations.info?channel='
+					+ paired.channel, null, paired.workspace);
+				select_user(event.user, workspace, channel, paired.workspace, meta.channel.user);
+			} else
+				error = '*Error:* You can no longer DM this person because you have'
+					+ ' been removed from the \'' + channel + '\' channel!';
 		}
 
 		if(!channel || !paired) {
@@ -638,9 +647,10 @@ async function handle_event(event) {
 				timestamp: event.ts,
 				name: 'warning',
 			}, workspace);
-			warning(workspace, event.channel, event.user,
-				'*Error:* You must either reply in a thread or specify a user to direct message!\n'
-				+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._');
+			if(!error)
+				error = '*Error:* You must either reply in a thread or specify a user to direct message!\n'
+					+ '_For help: click my avatar, choose an option beginning with \'/\', and hit send._';
+			warning(workspace, event.channel, event.user, error);
 			return;
 		}
 	} else {
