@@ -17,7 +17,7 @@ For each workspace you want to bridge, do the following:
  5. Toggle the Enable Events slider to On.
  6. Enter the URL of your server under Request URL.
  7. Expand Subscribe to bot events and add all of the following:
-    message.channels, message.groups, message.im, member_joined_channel, reaction_added
+    message.channels, message.groups, message.im, member_joined_channel, member_left_channel, reaction_added
  8. Click the Save Changes button at the bottom.
  9. Under Features in the sidebar, click Slash Commands, then hit Create New Command.
 10. Set Command as you prefer (e.g., slackline) and Short Description to anything at all.

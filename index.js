@@ -69,8 +69,10 @@ const cache = {
 		var user = this.uids[workspace + '#' + channel + '#' + name];
 		if(user)
 			return user;
+
+		var store = this.uids;
 		return Object.keys(this.uids).filter(function(each) {
-			return each.startsWith(workspace + '#' + channel + '#');
+			return each.startsWith(workspace + '#' + channel + '#') && store[each];
 		}).map(function(each) {
 			return each.replace(/.*#/, '');
 		}).sort();
@@ -86,6 +88,9 @@ const cache = {
 			name: profile.real_name,
 			avatar: profile.image_512,
 		};
+	},
+	unuser: async function(id, channel, workspace) {
+		this.uids[workspace + '#' + channel + '#' + (await this.user(id)).name] = undefined;
 	},
 	team: function(chanid) {
 		return this.teams[chanid];
@@ -511,6 +516,9 @@ async function handle_event(event) {
 	if(event.type == 'member_joined_channel') {
 		handle_join(event);
 		return;
+	} else if(event.type == 'member_left_channel') {
+		handle_leave(event);
+		return;
 	} else if(event.type == 'reaction_added') {
 		if(await messages(event.item.ts)) {
 			var workspace = await cache.workspace(cache.team(event.item.channel));
@@ -682,4 +690,10 @@ async function handle_join(event) {
 	var workspace = await cache.workspace(event.team);
 	var channel = await cache.channel(event.channel, workspace);
 	await cache.user(event.user, channel, workspace);
+}
+
+async function handle_leave(event) {
+	var workspace = await cache.workspace(event.team);
+	var channel = await cache.channel(event.channel, workspace);
+	await cache.unuser(event.user, channel, workspace);
 }
