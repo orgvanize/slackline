@@ -704,4 +704,12 @@ async function handle_leave(event) {
 	var workspace = await cache.workspace(event.team);
 	var channel = await cache.channel(event.channel, workspace);
 	await cache.unuser(event.user, channel, workspace);
+
+	var dm = cache.dm(event.user);
+	if(dm && dm.in_channel == channel) {
+		dm.uid = undefined;
+		warning(workspace, event.user, event.user,
+			'You can no longer DM this person because you have been removed from the'
+				+ ' \'' + channel + '\' channel.');
+	}
 }
