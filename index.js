@@ -628,7 +628,7 @@ async function handle_event(event) {
 		var error;
 		if(message.thread_ts && (!paired
 			|| thread.out_workspace != paired.workspace || thread.out_conversation != paired.channel)) {
-			channel = cache.line(thread.out_workspace , thread.out_channel, true);
+			channel = cache.line(thread.out_workspace, thread.out_channel, true);
 			if(channel)
 				channel = channel.channel;
 			else
