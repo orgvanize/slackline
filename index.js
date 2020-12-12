@@ -134,6 +134,15 @@ const cache = {
 		}
 		return im;
 	},
+	imer: function(imid, workspace) {
+		var ims = this.ims[workspace];
+		if(!ims)
+			return null;
+		for(var uid in ims)
+			if(ims[uid] == imid)
+				return uid;
+		return null;
+	},
 
 	bootstrap: async function(token) {
 		token = this.token(token);
@@ -639,7 +648,8 @@ async function handle_event(event) {
 				error = '*Error:* You can no longer DM this person because you have'
 					+ ' been removed from the \'' + channel + '\' channel!';
 			else if((remote = cache.line(workspace, channel).channel)
-				&& !await is_member(thread.out_workspace, remote, event.user))
+				&& !await is_member(thread.out_workspace, remote,
+					cache.imer(thread.out_conversation, thread.out_workspace)))
 				error = '*Error:* You can no longer DM this person because they have'
 					+ ' been unbridged from the \'' + channel + '\' channel!';
 			else {
