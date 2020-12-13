@@ -156,8 +156,11 @@ const cache = {
 
 		var channels = await collect_call('conversations.list?types=public_channel,private_channel,im',
 			null, 'channels', token);
-		if(!channels)
-			console.log('Missing OAuth scope channels:read and/or groups:read?');
+		if(!channels) {
+			console.log('Missing OAuth scope channels:read, groups:read, and/or im:read?');
+			return false;
+		}
+
 		for(var channel of channels)
 			if(channel.is_im || this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
