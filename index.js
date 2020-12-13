@@ -423,10 +423,8 @@ function warning(workspace, channel, user, text) {
 
 async function bootstrap() {
 	for(var index = 0; process.env['TOKEN_' + index]; ++index)
-		if(!await cache.bootstrap(process.env['TOKEN_' + index])) {
+		if(!await cache.bootstrap(process.env['TOKEN_' + index]))
 			console.log('Failed to authenticate with token ' + index);
-			process.exit(2);
-		}
 
 	http.createServer(handle_connection).listen(PORT);
 }
