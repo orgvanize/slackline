@@ -181,20 +181,14 @@ if(!PORT) {
 	process.exit(1);
 }
 
+const LOGGING = process.env.LOGGING != undefined;
+
 const TOKEN_0 = cache.token(process.env.TOKEN_0);
 if(!TOKEN_0) {
 	console.log('Environment is missing $TOKEN_0 or it is not #-delimited');
 	console.log('Only URL verification is supported in this configuration');
 }
-for(var index = 0; process.env['TOKEN_' + index]; ++index)
-	if(!cache.bootstrap(process.env['TOKEN_' + index])) {
-		console.log('Failed to authenticate with token ' + index);
-		process.exit(2);
-	}
-
-const LOGGING = process.env.LOGGING != undefined;
-
-http.createServer(handle_connection).listen(PORT);
+bootstrap();
 
 async function cached(memo, key, method, parameter, argument, workspace, update = true) {
 	if(!memo[key]) {
@@ -425,6 +419,16 @@ function warning(workspace, channel, user, text) {
 		user: user,
 		text: text,
 	}, workspace);
+}
+
+async function bootstrap() {
+	for(var index = 0; process.env['TOKEN_' + index]; ++index)
+		if(!await cache.bootstrap(process.env['TOKEN_' + index])) {
+			console.log('Failed to authenticate with token ' + index);
+			process.exit(2);
+		}
+
+	http.createServer(handle_connection).listen(PORT);
 }
 
 async function handle_connection(request, response) {
