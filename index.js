@@ -116,11 +116,19 @@ const cache = {
 				dmers.push(dmer);
 		return dmers;
 	},
-	im: async function(uid, workspace) {
-		var im = this.ims[workspace]
-		if(im)
-			im = im[uid];
-		if(!im) {
+	im: async function(uid, workspace, init) {
+		var ims = this.ims[workspace]
+		if(!ims) {
+			ims = {};
+			this.ims[workspace] = ims;
+		}
+
+		if(ims[uid])
+			return ims[uid];
+		else if(init) {
+			ims[uid] = init;
+			return init;
+		} else {
 			var channels = await collect_call('conversations.list?types=im',
 				null, 'channels', workspace);
 			if(!channels) {
@@ -129,13 +137,11 @@ const cache = {
 				return null;
 			}
 
-			var ims = {}
 			for(var channel of channels)
-				ims[channel.user] = channel.id;
-			this.ims[workspace] = ims;
-			im = ims[uid];
+				if(!ims[channel.user])
+					ims[channel.user] = channel.id;
+			return ims[uid];
 		}
-		return im;
 	},
 	imer: function(imid, workspace) {
 		var ims = this.ims[workspace];
@@ -168,14 +174,13 @@ const cache = {
 			if(channel.is_im || this.line(workspace.team.domain, channel.name, true)) {
 				this.teams[channel.id] = workspace.team.id;
 
-				if(!channel.is_im) {
-					var members = await collect_call('conversations.members?channel=' + channel.id,
-						null, 'members', token);
-					for(var member of members) {
+				var members = await collect_call('conversations.members?channel=' + channel.id,
+					null, 'members', token);
+				if(channel.is_im)
+					await this.im(channel.user, workspace.team.domain, channel.id);
+				else
+					for(var member of members)
 						await this.user(member, channel.name, workspace.team.domain);
-						await this.im(member, workspace.team.domain);
-					}
-				}
 			}
 
 		return true;
@@ -741,7 +746,6 @@ async function handle_join(event) {
 	var workspace = await cache.workspace(event.team);
 	var channel = await cache.channel(event.channel, workspace);
 	await cache.user(event.user, channel, workspace);
-	await cache.im(event.user, workspace);
 }
 
 async function handle_leave(event) {
