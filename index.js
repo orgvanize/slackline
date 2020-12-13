@@ -123,8 +123,11 @@ const cache = {
 		if(!im) {
 			var channels = await collect_call('conversations.list?types=im',
 				null, 'channels', workspace);
-			if(!channels)
-				console.log('Missing OAuth scope im:read?');
+			if(!channels) {
+				console.log('Workspace \'' + workspace
+					+ '\' missing OAuth scope im:read (' + uid  + ')?');
+				return null;
+			}
 
 			var ims = {}
 			for(var channel of channels)
@@ -168,8 +171,10 @@ const cache = {
 				if(!channel.is_im) {
 					var members = await collect_call('conversations.members?channel=' + channel.id,
 						null, 'members', token);
-					for(var member of members)
+					for(var member of members) {
 						await this.user(member, channel.name, workspace.team.domain);
+						await this.im(member, workspace.team.domain);
+					}
 				}
 			}
 
@@ -736,6 +741,7 @@ async function handle_join(event) {
 	var workspace = await cache.workspace(event.team);
 	var channel = await cache.channel(event.channel, workspace);
 	await cache.user(event.user, channel, workspace);
+	await cache.im(event.user, workspace);
 }
 
 async function handle_leave(event) {
