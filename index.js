@@ -491,10 +491,11 @@ async function handle_command(payload) {
 	var error = '';
 	switch(command) {
 	case 'dm':
-		var argv = args.split(' - ');
-		args = argv[0];
-		if(argv.length > 1)
-			channel = argv[1];
+		var argv = args.match(/(.*) - (.*)/);
+		if(argv) {
+			args = argv[1];
+			channel = argv[2];
+		}
 	case 'list':
 		if(command == 'list' && args)
 			channel = args;
