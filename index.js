@@ -488,11 +488,13 @@ async function handle_command(payload) {
 		channel = await cache.channel(payload.channel_id, payload.team_domain);
 
 	var args = await process_args(payload.team_domain, channel, payload.text.replace(/\S+\s*/, ''));
+	var explicitchannel;
 	var error = '';
 	switch(command) {
 	case 'dm':
 		var argv = args.match(/(.*) - (.*)/);
 		if(argv) {
+			explicitchannel = channel;
 			args = argv[1];
 			channel = argv[2];
 		}
@@ -504,6 +506,12 @@ async function handle_command(payload) {
 				+ '_See_ *' + payload.command + ' help*.';
 
 		var paired = await cache.line(payload.team_domain, channel, true);
+		if(!paired && explicitchannel) {
+			// Maybe the user has a ' - ' in their name? Fall back to channel inference.
+			args += ' - ' + channel;
+			channel = explicitchannel;
+			paired = await cache.line(payload.team_domain, channel, true);
+		}
 		if(!paired) {
 			if(command == 'dm') {
 				cache.dm(payload.user_id).uid = undefined;
