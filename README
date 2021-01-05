@@ -33,8 +33,65 @@ License                 | GPLv3          | Apache 2.0         | GPLv3           
 Implementation language | JavaScript     | Go                 | Python            | Ruby on Rails            |
                         +----------------+--------------------+-------------------+--------------------------+
 
-Setup instructions
-------------------
+User instructions
+-----------------
+
+Most functions work as they would in vanilla Slack, with a few exceptions:
+ * To tag someone the other side of a bridged channel, enclose the mention in backticks ("code"):
+   `@Their Name`
+  - If you forget to do this or misspell the person's name, the bot will send you a private inline
+    ("ephemeral") message pointing out the error and (in the latter case) listing bridged members.
+  - Because the Slack interface doesn't know bridged members, names will not complete as you type.
+  - The slash command lets you to list people without looking silly. Assuming it's named /slackline:
+    /slackline list
+  - If trying to send a message ending in a mention, you may need to click just to the right of the
+    message text or press the right arrow key just before sending to prevent Slack from mangling it.
+ * If you mention a user who is in your own workspace, on the same side of a bridged channel, the
+   @Their Name mention will appear as `@Their Name` on the other side of the bridge, as if they had
+   been remotely mentioned from there.
+  - If you mention someone who is in your own workspace but not the bridged channel, the mention
+    will be visible but redacted on the other side of the bridge. Hovering over it with a mouse will
+    show "Private user info."
+  - If after the above, you accept Slack's suggestion to add them to the channel, any subsequent
+    mentions from either side of the bridge will be treated normally.
+  - As soon as someone leaves a channel, subsequent mentions made from the same workspace are
+    redacted and it becomes impossible to mention them remotely from the bridged workspace.
+  - If you mention another channel from your own workspace, it will be visible but redacted on the
+    other side of the bridge. Hovering over it with a mouse will show "Private channel info."
+ * Because the bridge only has access to a single bot user per Slack workspace, it does not support
+   reactions: it would be impossible to tell who had made each reaction and how many times it had
+   been given. The bot will send you a warning message if you do react in a bridged channel.
+  - As a workaround, you can send emoji in messages instead.
+  - If you send an emoji that isn't present in the bridged workspace, it will appear as the text
+    :emoji-name:. Likewise, the other side can use it by typing that same name.
+ * If you send a nonempty message with file attachment(s), the text is relayed to the other side of
+   the bridge but attachments are dropped. The bot sends you a warning whenever it drops an
+   attachment in this way.
+ * You can DM a user on the other end of a bridged channel. Assuming the slash command /slackline:
+   /slackline dm Their Name
+  - Resulting messages will appear in a single DM channel with the bot user, mixed with DMs with
+    other bridged users. You manage the person you're currently DM'ing using the slash command.
+  - In addition to temporary (ephemeral) help messages, the bot leaves permanent messages showing
+    changes in destination so you can understand the chat log when you read it later.
+  - If you DM the bot without first using the slash command, it will send you a temporary help
+    message and react to your post with a warning emoji so you can tell it wasn't sent. You may
+    safely delete the message from your DMs if you like.
+  - If you respond to a DM in a thread, your response will automatically be routed to the user that
+    message was shared by or with. In addition, the destination for further DMs will be changed in
+    case you decide to continue the conversation outside the thread; the bot will warn you of this.
+  - When DM'ing less savvy users, you may wish to advise them in the message to reply in a thread.
+ * Depending on how the server is hosted, you may see the following Slackbot message when using the
+   slash command if no bridged channel has been used for a while:
+   failed with the error "operation_timeout"
+  - If this happens, simply wait a few seconds and hit enter to rerun your command. If the problem
+    persists after a few tries, you'll want to contact your admin.
+ * Note that you cannot use the slash command within threads, only channels. Furthermore, using it
+   anywhere except a bridged channel or your DMs requires specifying the channel in question.
+  - For more details, check the inline usage documentation:
+    /slackline help
+
+Setup instructions (for admins)
+-------------------------------
 
 Launch the server:
  1. If persistence is desired (required for production), set up a PostgresSQL database.
@@ -83,8 +140,8 @@ For each workspace, give the bot user access to each channel you configured abov
  3. In the right-hand sidebar, click More, choose Add apps, and find your newly-created app.
  4. Repeat these steps for each other channel in the workspace.
 
-Supported configurations
-------------------------
+Supported configurations (for admins)
+-------------------------------------
 
  * Channels may be bridged within the same workspace or between different ones.
   - If any channel in a workspace is bridged with a channel in the same workspace, it becomes
