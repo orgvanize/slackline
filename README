@@ -1,6 +1,41 @@
 Slackline: a bot to bridge channels between *free* Slack workspaces
 =========
 
+Slackline features
+------------------
+
+System                    Slackline       42wim/matterbridge   ossobv/slackbridge   atomic-app/slack-portals
+                        +----------------+--------------------+-------------------+--------------------------+
+Workspace presence      | Bot user       | Classic bot user   | Legacy Webhooks   | Legacy Webhooks          |
+Configuration           | Env variables  | File (TOML)        | File or env vars  | Graphical Web portal     |
+Persistence             | PostgreSQL     | ✗                  | ✗                 | SQLite (config only)     |
+                        +----------------+--------------------+-------------------+--------------------------+
+Message appearance      | Name & avatar  | Username & avatar  | Username & avatar | Username & avatar        |
+User mentions           | ✓ (spellcheck) | Internal username  | Internal username | ✗                        |
+List users              | Slash command  | ✗                  | !info message     | ✗                        |
+Edits and deletions     | ✓              | Until next restart | ✗                 | ✗                        |
+Emoji reactions         | ✗ (warns user) | ✗                  | ✗                 | ✗                        |
+Emoji in messages       | ✓              | ✓                  | ✓                 | ✓                        |
+File attachments        | ✗ (warns user) | ✓                  | ✗ (warns user)    | ✗                        |
+Typing notification     | ✗              | Unattributed       | ✗                 | ✗                        |
+                        +----------------+--------------------+-------------------+--------------------------+
+Threaded messages       | ✓              | Until next restart | ✗                 | ✗                        |
+Thread broadcasts       | ✓              | ✗                  | N/A               | N/A                      |
+Message pinning         | ✗              | ✗                  | ✗                 | ✗                        |
+Channel topics          | ✗              | ✓                  | ✗                 | ✗                        |
+                        +----------------+--------------------+-------------------+--------------------------+
+Public channels         | ✓              | ✓                  | ✓                 | ✓                        |
+Private channels        | ✓              | ✓                  | ✗                 | ✗                        |
+Direct messages         | One-on-one     | ✗                  | ✗                 | ✗                        |
+Other platforms         | ✗              | ✓                  | ✗                 | ✗                        |
+                        +----------------+--------------------+-------------------+--------------------------+
+License                 | GPLv3          | Apache 2.0         | GPLv3             | MIT                      |
+Implementation language | JavaScript     | Go                 | Python            | Ruby on Rails            |
+                        +----------------+--------------------+-------------------+--------------------------+
+
+Setup instructions
+------------------
+
 Launch the server:
  1. If persistence is desired (required for production), set up a PostgresSQL database.
  2. To enable persistence so threading, editing, and deletion work after a restart, export variable:
