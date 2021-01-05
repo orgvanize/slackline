@@ -82,3 +82,40 @@ For each workspace, give the bot user access to each channel you configured abov
  2. Press the Show channel details button in the upper-right corner.
  3. In the right-hand sidebar, click More, choose Add apps, and find your newly-created app.
  4. Repeat these steps for each other channel in the workspace.
+
+Supported configurations
+------------------------
+
+ * Channels may be bridged within the same workspace or between different ones.
+  - If any channel in a workspace is bridged with a channel in the same workspace, it becomes
+    possible to DM local Slack users via Slackline. This is probably not useful except for testing.
+ * If a channel is bridged in one direction only, messages within the destination side stay there;
+   the bot does not send warnings when such messages are (not) sent, so the fact that the channel is
+   configured in this way is apparent only to users with access to both sides of the bridge.
+  - The most natural use of this is to allow users from a remote workspace to make announcements in
+    a #general channel that has restricted posting (and probably threaded replying) permissions.
+  - The configuration can also be used to "eavesdrop" on one or more channels from a "monitoring"
+    one. Possible use cases include compliance, transparency, observer membership of a committee, or
+    achiving (although note that deletions and edits in the source channel will propagate as usual).
+  - If used between multiple workspaces, this could allow a single user to centralize notifications
+    they care about (e.g., to minimize open workspaces or account logins from their mobile device).
+  - It is perhaps also useful for collecting information from multiple channels for a bot to use.
+ * Note that DM'ing is only supported between channels that are bridged bidirectionally. Use in
+   other configurations is at your own peril.
+  - It is possible, though perhaps undesirable, to bridge a channel with itself. Such a pairing is
+    inherently bidirectional, and therefore allows any channel member to DM any other via Slackline.
+ * Users are only permitted to DM with each other if each is a member of the opposite side of a
+   bridged channel pair.
+  - The slash command will inform users when they explicitly specify a channel they are not a member
+    of. Note that this feature presents an intentional side channel: a user can use it to determine
+    whether a private channel is bridged given its name, or determine the name of bridged channels
+    via bruteforce. As a result, channel names should not be considered secret; in practice, they
+    are not anyway if users are allowed to create new channels.
+  - If either party of an existing DM conversation is removed from their side of the bridged channel
+    pair, both are notified that they cannot continue the conversation. Note, however, that any
+    edits or deletions of existing messages still propagate; this is in case it is desirable to
+    remotely delete DMs that had been shared with a bridged member before the mods on the remote
+    side banned them from the channel.
+  - If a since-unbridged user is harassing another by editing existing DMs, the admin's primary
+    recourse is to drop the corresponding message pairings from the Slackline database.
+ * Note that Slackline does not propagate any bot messages, even those sent by other bots.
