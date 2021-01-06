@@ -16,8 +16,11 @@
 
 const http = require('http');
 const https = require('https');
+const FormData = require('form-data');
 const messages = require('./messages');
 const querystring = require('querystring');
+
+const TEMP_UPLOAD_ID_TEXT = '----TEMPUPLOAD----';
 
 const cache = {
 	lines: {},
@@ -217,29 +220,63 @@ async function cached(memo, key, method, parameter, argument, workspace, update 
 	return memo[key];
 }
 
-function call(method, body, workspace) {
+function authHeaders(workspace) {
 	var token = cache.token(workspace);
 	if(!token)
 		token = workspace;
 	if(!token)
 		token = TOKEN_0;
+	
+	return {
+		Authorization: 'Bearer ' + token,
+	}
+}
 
-	var header = {
+function call(method, body, workspace, content_type = 'application/json') {
+	var options = {
 		headers: {
-			Authorization: 'Bearer ' + token,
+			...authHeaders(workspace),
 		},
 	};
+
 	var payload = '';
+	var form = undefined;
 	if(body) {
-		header.method = 'POST';
-		header.headers['Content-Type'] = 'application/json';
-		payload = JSON.stringify(body);
+		options.method = 'POST';
+		options.headers['Content-Type'] = content_type;
+		if(content_type == 'multipart/form-data') {
+			if(!Array.isArray(body) || body.length < 1 || !body[0].key) {
+				console.error(`Invalid body structure for ${content_type}`, body);
+				return;
+			}
+
+			form = new FormData();
+			for(const part of body) {
+				form.append(part.key, part.value, { filename: part.filename });
+			}
+			options.headers = {
+				...options.headers,
+				...form.getHeaders(),
+			};
+		}
+		else if(content_type == 'application/json') {
+			payload = JSON.stringify(body);
+		}
+		else {
+			payload = body;
+		}
 	}
 
-	var request = https.request('https://slack.com/api/' + method, header);
-	var response = new Promise(function(resolve) {
+	var request = https.request('https://slack.com/api/' + method, options);
+	if(form) {
+		form.pipe(request);
+	}
+	var response = new Promise(function(resolve, reject) {
 		request.on('response', async function(res) {
 			resolve(JSON.parse(await stringify(res)));
+		});
+		request.on('error', err => {
+			reject(err);
 		});
 	});
 	request.end(payload);
@@ -265,6 +302,103 @@ async function collect_call(method, body, array, workspace) {
 			cursor = '';
 	} while(cursor);
 	return collected;
+}
+
+async function get_event_files_data(event, workspace) {
+	if(typeof event != 'object' || !Array.isArray(event.files)) {
+		console.error('File upload: invalid event object', event);
+		return [];
+	}
+
+	// TODO: figure out why this doesn't work
+	//const workspace = await cache.workspace(event.team);
+	
+	const files = await Promise.all(event.files.map(async file => {
+		try {
+			const file_data = await new Promise((resolve, reject) => {
+				https.get(
+					file.url_private,
+					{
+						headers: {
+							...authHeaders(workspace),
+						},
+					},
+					res => {
+						let chunks = [];
+						res.on('data', data => {
+							chunks.push(data);
+						});
+						res.on('end', () => {
+							resolve(Buffer.concat(chunks));
+						});
+					}
+				).on('error', err => {
+					reject(err);
+				});
+			});
+
+			return {
+				...file,
+				file_data
+			};
+		}
+		catch(e) {
+			console.error('Error retrieving file from event: ', e, event);
+		}
+	}));
+	return files.filter(file => !!file);
+}
+
+async function upload_files(files_with_data, workspace, channel) {
+	if(!Array.isArray(files_with_data) || !workspace) {
+		console.error('File upload: invalid data passed to upload_files', files_with_data, workspace);
+		return [];
+	}
+
+	let files = await Promise.all(files_with_data.map(async file => {
+		if(typeof file !== 'object' || !file.name || !Buffer.isBuffer(file.file_data)) {
+			console.error('File upload: invalid file data in upload_files', file);
+			reject();
+		}
+
+		try {
+			const res = await call(
+				'files.upload',
+				[
+					{ key: 'filename', value: file.name },
+					{ key: 'channels', value: channel },
+					{ key: 'file', value: file.file_data, filename: file.name },
+					{ key: 'initial_comment', value: TEMP_UPLOAD_ID_TEXT },
+				],
+				workspace,
+				'multipart/form-data'
+			);
+
+			const channelId = res && res.file && res.file.channels && res.file.channels[0] ? res.file.channels[0] : undefined;
+			if(channelId && res.file.shares && res.file.shares.public && res.file.shares.public[channelId] && res.file.shares.public[channelId]) {
+				const deleteRes = await call('chat.delete', {
+					channel: channelId,
+					ts: res.file.shares.public[channelId][0].ts,
+				}, workspace);
+
+				if(LOGGING)
+					console.log('file message delete response', deleteRes);
+			}
+			else {
+				console.error('could not find some data needed to delete temp. message', channelId, JSON.stringify(res.file));
+			}
+
+			return res;
+		}
+		catch(e) {
+			console.error('File upload: Error uploading file to destination', e, file);
+		}
+	}));
+
+	if(LOGGING)
+		console.log('file results', files);
+	
+	return files.filter(res => (res && res.ok)).map(res => res.file);
 }
 
 function escaped(varname) {
@@ -565,7 +699,9 @@ async function handle_command(payload) {
 }
 
 async function handle_event(event) {
-	if(event.type == 'member_joined_channel') {
+	if(event.message && event.message.text && event.message.text.includes(TEMP_UPLOAD_ID_TEXT)) {
+		return;
+	} else if(event.type == 'member_joined_channel') {
 		handle_join(event);
 		return;
 	} else if(event.type == 'member_left_channel') {
@@ -579,11 +715,6 @@ async function handle_event(event) {
 				+ '\n_If you want the other channel to see, send an emoji message!_');
 		}
 		return;
-	} else if(event.subtype == 'file_share') {
-		var workspace = await cache.workspace(cache.team(event.channel));
-		warning(workspace, event.channel, event.user,
-			'*Warning:* File uploads are currently unsupported.'
-			+ '\n_If you want the other channel to see, link to cloud storage instead!_');
 	} else if(event.type != 'message') {
 		console.log('Unhandled type in event: ' + JSON.stringify(event));
 		return;
@@ -728,6 +859,23 @@ async function handle_event(event) {
 
 		message.text = await process_users(workspace, channel, event.user,
 			message.text, paired.workspace, users, event.channel);
+	}
+
+	if(event.files) {
+		const uploaded_files = await upload_files(await get_event_files_data(event, workspace), paired.workspace, paired.channel);
+		message.attachments = uploaded_files
+			.filter(file => typeof file === 'object' && file.permalink)
+			.map(file => {
+				if(!file.mimetype || !file.mimetype.includes('image/')) {
+					return {
+						text: `<${file.permalink}|${file.name}>`
+					};
+				}
+				return {
+					image_url: file.permalink,
+					text: file.name
+				};
+			});
 	}
 
 	var ack = await call('chat.postMessage', message, paired.workspace);
