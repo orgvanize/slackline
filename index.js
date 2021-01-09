@@ -14,10 +14,14 @@
 // Copyright (C) 2020, Sol Boucher
 // Copyright (C) 2020, The Vanguard Campaign Corps Mods (vanguardcampaign.org)
 
+const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const messages = require('./messages');
 const querystring = require('querystring');
+
+const README = 'README';
+const USERMANUAL = 'User instructions';
 
 const cache = {
 	lines: {},
@@ -550,11 +554,23 @@ async function handle_command(payload) {
 		select_user(payload.user_id, payload.team_domain, channel, paired.workspace, uid, payload.command);
 		return '';
 
+	case 'manual':
+		var readme = await fs.promises.readFile(README, {
+			encoding: 'utf8',
+		});
+		readme = readme.split('\n\n');
+
+		var usermanual = readme.findIndex(function(elem) {
+			return elem.startsWith(USERMANUAL);
+		});
+		return readme[usermanual + 1];
+
 	default:
 		error = '*Error:* Unrecognized command: \'' + command + '\'\n';
 	case 'help':
 		error += 'Supported commands:'
 			+ '\n>' + payload.command + ' help\n\tShow this help'
+			+ '\n>' + payload.command + ' manual\n\tShow detailed user documentation'
 			+ '\n>' + payload.command + ' list [channel]\n\tList bridged members of current channel (or specified [channel])'
 			+ '\n>' + payload.command + ' dm <user> [- channel]\n\tDirect message specified <user> (bridged via [channel])'
 			+ '\n\n_Note: In the above commands, <word> and [word] are not part of the command;'
