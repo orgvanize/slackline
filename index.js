@@ -734,9 +734,13 @@ async function handle_event(event) {
 
 			var uid = cache.imer(paired.channel, paired.workspace);
 			var name = await cache.user(uid, cache.line(workspace, channel), paired.workspace);
-			name = name.name;
-			users = {};
-			users[name] = uid;
+			if(name) {
+				name = name.name;
+				users = {};
+				users[name] = uid;
+			} else
+				console.log('Failed to build DM mention table: '
+					+ paired.workspace + '#' + paired.channel + ' -> ' + uid);
 		}
 
 		message.text = await process_users(workspace, channel, event.user,
