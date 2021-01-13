@@ -732,10 +732,7 @@ async function handle_event(event) {
 		if(event.channel_type == 'im') {
 			message.username += ' - ' + cache.line(workspace, channel).channel;
 
-			var uid = await call('conversations.info?channel='
-				+ paired.channel, null, paired.workspace);
-			uid = uid.channel.user;
-
+			var uid = cache.imer(paired.channel, paired.workspace);
 			var name = await cache.user(uid, cache.line(workspace, channel), paired.workspace);
 			name = name.name;
 			users = {};
