@@ -676,6 +676,8 @@ async function handle_event(event) {
 				workspace: dm.out_workspace,
 				channel: await cache.im(dm.uid, dm.out_workspace),
 			};
+			if(!paired.channel)
+				paired.uid = dm.uid;
 		}
 
 		var error;
@@ -727,6 +729,9 @@ async function handle_event(event) {
 			return;
 	}
 	message.channel = paired.channel;
+	if(!message.channel)
+		// DM'ing a user who has never opened the bot's Messages tab!
+		message.channel = paired.uid;
 
 	var user = await cache.user(event.user, channel, workspace);
 	if(user) {
@@ -737,6 +742,10 @@ async function handle_event(event) {
 			message.username += ' - ' + cache.line(workspace, channel).channel;
 
 			var uid = cache.imer(paired.channel, paired.workspace);
+			if(!uid)
+				// The DM channel doesn't exist yet!
+				uid = paired.uid;
+
 			var name = await cache.user(uid, cache.line(workspace, channel), paired.workspace);
 			if(name) {
 				name = name.name;
@@ -754,6 +763,12 @@ async function handle_event(event) {
 	var ack = await call('chat.postMessage', message, paired.workspace);
 	if(LOGGING)
 		console.log(ack);
+
+	if(!paired.channel) {
+		// Newly-created DM channel!
+		paired.channel = ack.channel;
+		await cache.im(paired.uid, paired.workspace, paired.channel);
+	}
 	await messages(event.ts, {
 		in_workspace: workspace,
 		in_channel: channel,
