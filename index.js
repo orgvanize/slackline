@@ -401,6 +401,8 @@ async function select_user(dmer, in_workspace, in_channel, out_workspace, dmee, 
 	if(command)
 		dm.command = command;
 
+	// Cleaning the channel is actually necessary for its side effect of refreshing the cache
+	// of user ID -> DM channel mappings. Otherwise, building the DM mention table will fail.
 	var cleaned = await clean_channel(in_workspace, dmer)
 	var user = await cache.user(dmee, cache.line(in_workspace, in_channel), out_workspace);
 	await call('chat.postMessage', {
@@ -414,8 +416,10 @@ async function select_user(dmer, in_workspace, in_channel, out_workspace, dmee, 
 }
 
 async function clean_channel(workspace, user) {
-	var modified = false;
+	// The cache refresh triggered by this lookup is important when responding in a DM thread
+	// triggers an automatic DM recipient switch! See the related comment in select_user().
 	var convo = await cache.im(user, workspace);
+	var modified = false;
 	var latest;
 	await call('conversations.history?channel=' + convo + '&limit=1', null, workspace);
 	while((latest = (await call('conversations.history?channel='
