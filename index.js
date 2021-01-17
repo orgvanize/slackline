@@ -328,14 +328,17 @@ async function process_users(in_workspace, in_channel, in_user, message, out_wor
 			mismatches.push(user);
 			return orig;
 		});
-	else
+	else {
 		message = await replace(message, /`@([^`]*)`/g, async function(orig, user) {
 			var uid = out_channel[user];
 			if(uid)
 				return '<@' + uid + '>';
 
+			mismatches.push(user);
 			return orig;
 		});
+		out_channel = Array.from(Object.keys(out_channel));
+	}
 
 	mismatches = mismatches.filter(function(each) {
 		return !locals[each];
@@ -383,7 +386,9 @@ async function process_args(in_workspace, in_channel, args) {
 }
 
 async function list_users(workspace, channel) {
-	var users = await cache.uid('', channel, workspace);
+	var users = channel;
+	if(!Array.isArray(channel))
+		users = await cache.uid('', channel, workspace);
 	return '`@' + users.join('`\n`@') + '`';
 }
 
