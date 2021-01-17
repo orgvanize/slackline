@@ -642,7 +642,7 @@ async function handle_event(event) {
 			if(event.message.user)
 				await cache.user(event.message.user, copy.in_channel, copy.in_workspace);
 			message.text = await process_users(copy.in_workspace, copy.in_channel, event.message.user,
-				message.text, copy.out_workspace, copy.out_channel);
+				message.text, copy.out_workspace, copy.out_channel, event.channel);
 			
 			var ack = await call('chat.update', message, copy.out_workspace);
 			if(LOGGING)
