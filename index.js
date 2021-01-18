@@ -301,6 +301,16 @@ async function replace(string, regex, async_func) {
 }
 
 async function process_users(in_workspace, in_channel, in_user, message, out_workspace, out_channel, display) {
+	if(typeof out_channel == 'string') {
+		var uid = cache.imer(out_channel, out_workspace);
+		if(uid) {
+			var name = await cache.user(uid, cache.line(in_workspace, in_channel), out_workspace);
+			out_channel = {
+				[name.name]: uid,
+			};
+		}
+	}
+
 	if(message.startsWith('@') || message.search(/[^<`]@/) != -1)
 		warning(in_workspace, display, in_user,
 			'*Warning:* If you want to tag someone in the bridged channel,'
@@ -745,20 +755,13 @@ async function handle_event(event) {
 		message.username = user.name;
 		if(event.channel_type == 'im') {
 			message.username += ' - ' + cache.line(workspace, channel).channel;
-
-			var uid = cache.imer(paired.channel, paired.workspace);
-			if(!uid)
+			if(!cache.imer(paired.channel, paired.workspace)) {
 				// The DM channel doesn't exist yet!
-				uid = paired.uid;
-
-			var name = await cache.user(uid, cache.line(workspace, channel), paired.workspace);
-			if(name) {
-				name = name.name;
-				users = {};
-				users[name] = uid;
-			} else
-				console.log('Failed to build DM mention table: '
-					+ paired.workspace + '#' + paired.channel + ' -> ' + uid);
+				var name = await cache.user(paired.uid, cache.line(workspace, channel), paired.workspace);
+				users = {
+					[name.name]: paired.uid,
+				};
+			}
 		}
 
 		message.text = await process_users(workspace, channel, event.user,
