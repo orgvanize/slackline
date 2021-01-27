@@ -459,7 +459,30 @@ function warning(workspace, channel, user, text) {
 
 function failure(workspace, channel, user, code) {
 	var mess = '*Error* sending message: \'' + code + '\'\n'
-		+ '_Your message was probably not delivered to the bridged channel!_';
+	switch(code) {
+	case 'channel_not_found':
+	case 'invalid_auth':
+	case 'missing_scope':
+	case 'not_allowed_token_type':
+		mess += 'This probably indicates that the Slackline server is misconfigured;'
+			+ ' please report this message to an infrastructure admin!\n';
+		break;
+	case 'not_in_channel':
+		mess += 'The destination channel exists, but does not contain a Slackline bot user;'
+			+ ' please report this message to a Slack admin!\n';
+		break;
+	case 'is_archived':
+		mess += 'The private destination channel has been archived.\n';
+		break;
+	case 'restricted_action':
+		mess += 'This may indicate that the destination channel disallows channel mentions;'
+			+ ' if you included an <!channel> (or similar), try resending without.\n';
+		break;
+	case 'account_inactive':
+		mess += 'The Slackline bot user was uninstalled from the destination workspace.\n';
+		break;
+	}
+	mess += '_Your message was probably not delivered to the bridged channel!_';
 	return warning(workspace, channel, user, mess);
 }
 
