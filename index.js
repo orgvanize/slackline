@@ -665,7 +665,9 @@ async function handle_event(event) {
 				console.log(ack);
 			if(!ack.ok)
 				failure(workspace, event.channel, event.message.user, ack.error);
-		}
+		} else
+			warning(workspace, event.channel, event.message.user,
+				'*Error:* You cannot edit this message because it failed to send.');
 		return;
 	} else if(event.subtype && (event.subtype == 'thread_broadcast'
 		|| event.subtype.endsWith('_join') || event.subtype.endsWith('_leave')
@@ -780,6 +782,11 @@ async function handle_event(event) {
 	if(LOGGING)
 		console.log(ack);
 	if(!ack.ok) {
+		await call('reactions.add', {
+			channel: event.channel,
+			timestamp: event.ts,
+			name: 'warning',
+		}, workspace);
 		failure(workspace, event.channel, event.user, ack.error);
 		return;
 	}
