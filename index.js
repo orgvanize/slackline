@@ -457,6 +457,12 @@ function warning(workspace, channel, user, text) {
 	}, workspace);
 }
 
+function failure(workspace, channel, user, code) {
+	var mess = '*Error* sending message: \'' + code + '\'\n'
+		+ '_Your message was probably not delivered to the bridged channel!_';
+	return warning(workspace, channel, user, mess);
+}
+
 async function bootstrap() {
 	for(var index = 0; process.env['TOKEN_' + index]; ++index)
 		if(!await cache.bootstrap(process.env['TOKEN_' + index]))
@@ -657,6 +663,8 @@ async function handle_event(event) {
 			var ack = await call('chat.update', message, copy.out_workspace);
 			if(LOGGING)
 				console.log(ack);
+			if(!ack.ok)
+				failure(workspace, event.channel, event.message.user, ack.error);
 		}
 		return;
 	} else if(event.subtype && (event.subtype == 'thread_broadcast'
@@ -771,6 +779,10 @@ async function handle_event(event) {
 	var ack = await call('chat.postMessage', message, paired.workspace);
 	if(LOGGING)
 		console.log(ack);
+	if(!ack.ok) {
+		failure(workspace, event.channel, event.user, ack.error);
+		return;
+	}
 
 	if(!paired.channel) {
 		// Newly-created DM channel!
