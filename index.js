@@ -14,11 +14,12 @@
 // Copyright (C) 2020, Sol Boucher
 // Copyright (C) 2020, The Vanguard Campaign Corps Mods (vanguardcampaign.org)
 
-const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const messages = require('./messages');
-const querystring = require('querystring');
+import * as fs from 'https://deno.land/std@0.164.0/node/fs.ts';
+import * as http from 'https://deno.land/std@0.164.0/node/http.ts';
+import * as https from 'https://deno.land/std@0.164.0/node/https.ts';
+import { messages } from './messages.js';
+import { process } from 'https://deno.land/std@0.164.0/node/process.ts';
+import * as querystring from 'https://deno.land/std@0.164.0/node/querystring.ts';
 
 const README = 'README';
 const USERMANUAL = 'User instructions';

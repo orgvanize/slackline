@@ -14,12 +14,16 @@
 // Copyright (C) 2020, Sol Boucher
 // Copyright (C) 2020, The Vanguard Campaign Corps Mods (vanguardcampaign.org)
 
+import * as pg from 'npm:pg@8.2.0';
+import { process } from 'https://deno.land/std@0.164.0/node/process.ts';
+
 var table = {};
-module.exports = object;
 if(!provision(process.env.DATABASE_URL)) {
 	console.log('Unable to connect to database');
 	process.exit(4);
 }
+
+export let messages = object;
 
 function object(key, value) {
 	if(value === undefined)
@@ -58,8 +62,7 @@ async function provision(db) {
 	if(!db)
 		return true;
 
-	var pg = require('pg');
-	module.exports = database;
+	messages = database;
 	table = new pg.Client({
 		connectionString: db,
 		ssl: {
