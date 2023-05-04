@@ -65,6 +65,7 @@ async function provision(db) {
 		ssl: {
 			rejectUnauthorized: false,
 		},
+		keepAlive: true,
 	});
 	if(await table.connect())
 		return false;
